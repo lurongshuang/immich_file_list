@@ -1,0 +1,90 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:immich_file_list/photo_grid_library/photo_grid.dart';
+
+class DummyPhotoItem implements PhotoGridItem {
+  @override
+  final String id;
+  @override
+  final DateTime date;
+  final Color color;
+  final String title;
+  final bool isVideo;
+
+  DummyPhotoItem({
+    required this.id,
+    required this.date,
+    required this.color,
+    this.title = '',
+    this.isVideo = false,
+  });
+
+  @override
+  Widget buildThumbnail(BuildContext context) {
+    return Container(
+      color: color,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Center(
+            child: Text(
+              id,
+              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+            ),
+          ),
+          if (title.isNotEmpty)
+            Positioned(
+              bottom: 4,
+              left: 4,
+              child: Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontSize: 10, backgroundColor: Colors.black45),
+              ),
+            ),
+          if (isVideo)
+            const Positioned(
+              top: 4,
+              right: 4,
+              child: Icon(Icons.play_circle_outline, color: Colors.white, size: 16),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class DummyDataFactory {
+  /// Generates dummy photo items covering the specified number of months.
+  static List<DummyPhotoItem> generateDummyData(int months, int count, {bool mixedTypes = false}) {
+    final random = Random(42);
+    final List<DummyPhotoItem> generated = [];
+    final now = DateTime.now();
+
+    for (int i = 0; i < count; i++) {
+      final randomDaysAgo = random.nextInt(months * 30 + 1);
+      final date = now.subtract(Duration(days: randomDaysAgo));
+      final color = Color.fromRGBO(
+        random.nextInt(256),
+        random.nextInt(256),
+        random.nextInt(256),
+        1.0,
+      );
+
+      final isVideo = mixedTypes ? random.nextBool() : false;
+      final title = mixedTypes && random.nextBool() ? '标题 $i' : '';
+
+      generated.add(
+        DummyPhotoItem(
+          id: '图片 $i',
+          date: date,
+          color: color,
+          isVideo: isVideo,
+          title: title,
+        ),
+      );
+    }
+
+    generated.sort((a, b) => b.date.compareTo(a.date));
+    return generated;
+  }
+}
