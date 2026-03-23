@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:immich_file_list/photo_grid_library/photo_grid.dart';
+import 'package:immich_file_list/photo_grid/photo_grid.dart';
 import '../dummy_data.dart';
 
 // 提取一个通用的带有控制器、删除和导航条逻辑的骨架壳子，避免每个案例写重复代码。

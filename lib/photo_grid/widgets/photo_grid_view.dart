@@ -2,12 +2,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import 'photo_grid_scrubber.dart';
-import 'photo_drag_region.dart';
 import 'photo_grid_item.dart';
-import 'photo_grid_segment.dart';
-import 'photo_grid_sliver_segmented_list.dart';
-import 'photo_selection_controller.dart';
+import '../core/photo_grid_segment.dart';
+import '../core/photo_grid_sliver_segmented_list.dart';
+import '../logic/photo_drag_region.dart';
+import '../logic/photo_selection_controller.dart';
 
 /// 核心组合组件：提供高性能照片时间轴网格展示功能。
 /// 
@@ -35,19 +34,20 @@ class PhotoGridView extends StatefulWidget {
   /// 若传入此控制器，则开启相册的联动选择能力（单选与框选）。如果没有多选需求可以为 null。
   final PhotoSelectionController? selectionController;
 
-  /// 是否启用右侧吸附悬浮的极速滚动轴 (滑动导航条)。
-  /// 仅在照片总数量大于20条时自动展示。
-  final bool showDragScroll;
+  /// 可选的滚动控制器。若不提供则内部自动创建一个。
+  /// 当需要与外部组件（如 PhotoGridScrubber）联动时应当传入。
+  final ScrollController? controller;
 
-  /// 下拉刷新回调（如果为空则不开启下拉刷新）
+  /// 当内部段落数据重新生成后的回调。通常给 Scrubber 用于同步进度。
+  final void Function(List<Segment> segments)? onSegmentsChanged;
+
+  /// 下拉刷新回调
   final Future<void> Function()? onRefresh;
 
-  /// 照片缩略图单击点击事件回调。
-  /// 如果此时 [selectionController] 并未处于激活模式，则会直接触发该回调，通常用于路由至照片大图全屏预览页面。
+  /// 项点击回调
   final void Function(PhotoGridItem item)? onTap;
 
-  /// 高级布局插槽组合能力：可注入原生的诸如 `SliverAppBar` 或 `SliverPersistentHeader`。
-  /// 使得 `PhotoGridView` 的内部滚动区域完美承接顶层的复杂下拉特效/吸顶效果。
+  /// 额外的顶部 Sliver
   final Widget? topSliver;
 
   const PhotoGridView({
@@ -58,7 +58,8 @@ class PhotoGridView extends StatefulWidget {
     this.childAspectRatio = 1.0,
     this.groupBy = GroupPhotoBy.month,
     this.selectionController,
-    this.showDragScroll = true,
+    this.controller,
+    this.onSegmentsChanged,
     this.onRefresh,
     this.onTap,
     this.topSliver,
@@ -69,14 +70,11 @@ class PhotoGridView extends StatefulWidget {
 }
 
 class _PhotoGridViewState extends State<PhotoGridView> {
-  final ScrollController _scrollController = ScrollController();
+  ScrollController? _internalController;
+  ScrollController get _scrollController => widget.controller ?? _internalController!;
 
   final List<Bucket> _buckets = [];
   List<Segment> _segments = [];
-
-  int? _dragAnchorIndex;
-
-  ScrollPhysics? _scrollPhysics;
 
   double? _lastMaxWidth;
   List<Segment>? _cachedSegments;
@@ -84,12 +82,29 @@ class _PhotoGridViewState extends State<PhotoGridView> {
   @override
   void initState() {
     super.initState();
+    if (widget.controller == null) {
+      _internalController = ScrollController();
+    }
     _rebuildRenderList();
+  }
+
+  @override
+  void dispose() {
+    _internalController?.dispose();
+    super.dispose();
   }
 
   @override
   void didUpdateWidget(PhotoGridView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      if (oldWidget.controller == null) {
+        _internalController?.dispose();
+        _internalController = null;
+      } else if (widget.controller == null) {
+        _internalController = ScrollController();
+      }
+    }
     if (oldWidget.items != widget.items ||
         oldWidget.groupBy != widget.groupBy) {
       _rebuildRenderList();
@@ -134,59 +149,6 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     if (currentDate != null && count > 0) {
       _buckets.add(TimeBucket(date: currentDate, assetCount: count));
     }
-  }
-
-  void _setDragStartIndex(PhotoGridItemIndex index) {
-    if (widget.selectionController == null) return;
-    setState(() {
-      _scrollPhysics = const ClampingScrollPhysics();
-      _dragAnchorIndex = index.offset;
-      
-      if (_dragAnchorIndex != null && _dragAnchorIndex! < widget.items.length) {
-         final anchorItemId = widget.items[_dragAnchorIndex!].id;
-         widget.selectionController!.startDragSelection(anchorItemId);
-      }
-    });
-  }
-
-  void _stopDrag() {
-    if (widget.selectionController == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        _scrollPhysics = null;
-      });
-    });
-    setState(() {
-      widget.selectionController!.endDragSelection();
-    });
-  }
-
-  void _dragScroll(double delta) {
-    if (!_scrollController.hasClients) return;
-    final currentOffset = _scrollController.offset;
-    final maxScrollExtent = _scrollController.position.maxScrollExtent;
-    final targetOffset = (currentOffset + delta).clamp(0.0, maxScrollExtent);
-
-    _scrollController.jumpTo(targetOffset);
-  }
-
-  void _handleDragAssetEnter(PhotoGridItemIndex index) {
-    if (_dragAnchorIndex == null || widget.selectionController == null) return;
-
-    final dragAnchor = _dragAnchorIndex!;
-    final currentOffset = index.offset;
-
-    int start = min(dragAnchor, currentOffset);
-    int end = max(dragAnchor, currentOffset);
-
-    final affectedIds = <String>{};
-    for (int i = start; i <= end; i++) {
-      if (i < widget.items.length) {
-        affectedIds.add(widget.items[i].id);
-      }
-    }
-
-    widget.selectionController!.updateDragSelection(affectedIds);
   }
 
   Widget _buildHeader(
@@ -286,7 +248,11 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     );
   }
 
-  Widget _buildGrid(BuildContext context) {
+  /// 获取当前生成的段落信息。用于给外部同步（如 Scrubber）。
+  List<Segment> get segments => _segments;
+
+  @override
+  Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
@@ -315,12 +281,17 @@ class _PhotoGridViewState extends State<PhotoGridView> {
           _segments = builder.generate();
           _cachedSegments = _segments;
           _lastMaxWidth = screenWidth;
+          
+          if (widget.onSegmentsChanged != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+               widget.onSegmentsChanged?.call(_segments);
+            });
+          }
         }
 
         final listWidget = PrimaryScrollController(
           controller: _scrollController,
           child: CustomScrollView(
-            physics: _scrollPhysics,
             slivers: [
               if (widget.topSliver != null) widget.topSliver!,
               SliverSegmentedList(
@@ -340,32 +311,10 @@ class _PhotoGridViewState extends State<PhotoGridView> {
           ),
         );
 
-        final child = (widget.showDragScroll && widget.items.length >= 20)
-            ? PhotoGridScrubber(
-                controller: _scrollController,
-                segments: _segments,
-                timelineHeight: MediaQuery.of(context).size.height,
-                topPadding: MediaQuery.of(context).padding.top + 50,
-                bottomPadding: MediaQuery.of(context).padding.bottom + 48.0,
-                child: listWidget,
-              )
-            : listWidget;
-
         return widget.onRefresh == null
-            ? child
-            : RefreshIndicator(onRefresh: widget.onRefresh!, child: child);
+            ? listWidget
+            : RefreshIndicator(onRefresh: widget.onRefresh!, child: listWidget);
       },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PhotoDragRegion(
-      onStart: _setDragStartIndex,
-      onAssetEnter: _handleDragAssetEnter,
-      onEnd: _stopDrag,
-      onScroll: _dragScroll,
-      child: _buildGrid(context),
     );
   }
 }

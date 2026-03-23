@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:immich_file_list/photo_grid_library/photo_grid.dart';
+import 'package:immich_file_list/photo_grid/photo_grid.dart';
 
 class DummyPhotoItem implements PhotoGridItem {
   @override

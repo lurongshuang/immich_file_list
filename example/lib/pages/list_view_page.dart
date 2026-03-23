@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:immich_file_list/photo_grid_library/photo_grid.dart';
+import "../widgets/example_page_wrapper.dart";
+import 'package:immich_file_list/photo_grid/photo_grid.dart';
 import '../dummy_data.dart';
-import '../widgets/example_page_wrapper.dart';
+import '../widgets/photo_grid_gallery.dart';
 
 // ============================================
 // 5. Complex List View Example (SliverAppBar)
@@ -18,13 +19,13 @@ class ListViewExample extends StatelessWidget {
         final isSelecting = controller.isSelectionActive;
         final selectedCount = controller.selectedIds.length;
 
-        return PhotoGridView(
+        return PhotoGridGallery(
           items: items,
           assetsPerRow: 1,               
           childAspectRatio: 3.5,
           margin: 8.0,
           groupBy: GroupPhotoBy.month,
-          showDragScroll: true,
+          showScrubber: true,
           selectionController: controller,
           onTap: (item) => handleTap(context, item, controller),
           // 这里动态利用控制器来重塑顶层头部

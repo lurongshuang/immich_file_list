@@ -3,7 +3,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'photo_grid_segment.dart';
+import '../core/photo_grid_segment.dart';
 
 const Duration kTimelineScrubberFadeInDuration = Duration(milliseconds: 150);
 const Duration kTimelineScrubberFadeOutDuration = Duration(milliseconds: 2000);

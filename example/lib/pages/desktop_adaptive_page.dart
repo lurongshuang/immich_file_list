@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:immich_file_list/photo_grid_library/photo_grid.dart';
+import "../widgets/example_page_wrapper.dart";
+import 'package:immich_file_list/photo_grid/photo_grid.dart';
 import '../dummy_data.dart';
-import '../widgets/example_page_wrapper.dart';
+import '../widgets/photo_grid_gallery.dart';
 
 // ============================================
 // 7. Desktop Adaptive Example (Using AdaptiveContainer Wrapper)
@@ -24,13 +25,13 @@ class DesktopAdaptiveExample extends StatelessWidget {
             // 这里才是真正的业务计算逻辑：外部决定怎么用这个宽度
             final assetsPerRow = (stableWidth / 180).floor().clamp(2, 20);
 
-            return PhotoGridView(
+            return PhotoGridGallery(
               key: ValueKey('grid_at_width_$stableWidth'), // 给个 key 确保重绘时状态干净
               items: items,
               assetsPerRow: assetsPerRow,
               margin: 4.0,
               groupBy: GroupPhotoBy.day,
-              showDragScroll: true,
+              showScrubber: true,
               selectionController: controller,
               onTap: (item) => handleTap(context, item, controller),
             );
