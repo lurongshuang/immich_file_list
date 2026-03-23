@@ -1,5 +1,4 @@
 import 'package:collection/collection.dart';
-import 'package:flutter/widgets.dart';
 
 enum GroupAssetsBy { day, month, year, auto, none }
 
@@ -64,9 +63,6 @@ abstract class Segment {
   int getMaxChildIndexForScrollOffset(double scrollOffset);
   /// 将子项索引转换为绝对布局偏移。
   double indexToLayoutOffset(int index);
-
-  /// 构建视图项的 Builder。
-  Widget builder(BuildContext context, int index);
 }
 
 extension SegmentListExtension on List<Segment> {
@@ -75,15 +71,11 @@ extension SegmentListExtension on List<Segment> {
   Segment? findByOffset(double offset) => firstWhereOrNull((s) => s.isWithinOffset(offset)) ?? lastOrNull;
 }
 
-typedef PhotoGridHeaderBuilder = Widget Function(BuildContext context, Bucket bucket, HeaderType header, double height, int assetOffset);
-typedef PhotoGridRowBuilder = Widget Function(BuildContext context, int assetIndex, int assetCount, double tileHeight, double spacing, int columnCount);
 
 class FixedSegment extends Segment {
   final double tileHeight;
   final int columnCount;
   final double mainAxisExtend;
-  final PhotoGridHeaderBuilder headerBuilder;
-  final PhotoGridRowBuilder rowBuilder;
 
   const FixedSegment({
     required super.firstIndex,
@@ -97,8 +89,6 @@ class FixedSegment extends Segment {
     required super.headerExtent,
     required super.spacing,
     required super.header,
-    required this.headerBuilder,
-    required this.rowBuilder,
   })  : assert(tileHeight != 0),
         mainAxisExtend = tileHeight + spacing;
 
@@ -121,31 +111,6 @@ class FixedSegment extends Segment {
     if (!adjustedOffset.isFinite || adjustedOffset < 0) return firstIndex;
     return gridIndex + (adjustedOffset / mainAxisExtend).ceil() - 1;
   }
-
-  @override
-  Widget builder(BuildContext context, int index) {
-    if (index == firstIndex) {
-      return headerBuilder(context, bucket, header, headerExtent, firstAssetIndex);
-    }
-    
-    final rowIndexInSegment = index - (firstIndex + 1);
-    final assetIndex = rowIndexInSegment * columnCount;
-    final assetCount = bucket.assetCount;
-    // 计算当前行具体包含多少个项（如果是段落最后一行，可能少于 columnCount）
-    int numberOfAssets = columnCount;
-    if (assetIndex + columnCount > assetCount) {
-      numberOfAssets = assetCount - assetIndex;
-    }
-
-    return rowBuilder(
-      context,
-      firstAssetIndex + assetIndex,
-      numberOfAssets,
-      tileHeight,
-      spacing,
-      columnCount,
-    );
-  }
 }
 
 class FixedSegmentBuilder {
@@ -154,8 +119,6 @@ class FixedSegmentBuilder {
   final int columnCount;
   final double spacing;
   final GroupAssetsBy groupBy;
-  final PhotoGridHeaderBuilder headerBuilder;
-  final PhotoGridRowBuilder rowBuilder;
 
   const FixedSegmentBuilder({
     required this.buckets,
@@ -163,8 +126,6 @@ class FixedSegmentBuilder {
     required this.columnCount,
     this.spacing = 2.0,
     this.groupBy = GroupAssetsBy.day,
-    required this.headerBuilder,
-    required this.rowBuilder,
   });
 
   static double headerExtent(HeaderType header) {
@@ -239,8 +200,6 @@ class FixedSegmentBuilder {
           headerExtent: currentHeaderExtent,
           spacing: spacing,
           header: timelineHeader,
-          headerBuilder: headerBuilder,
-          rowBuilder: rowBuilder,
         ),
       );
 

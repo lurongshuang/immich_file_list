@@ -10,6 +10,21 @@ import '../logic/photo_selection_controller.dart';
 
 /// 构建网格照片项的函数：将数据模型转换为渲染所需的 Widget。
 typedef PhotoGridItemBuilder = Widget Function(BuildContext context, PhotoGridItem item);
+typedef PhotoGridHeaderBuilder = Widget Function(
+  BuildContext context,
+  Bucket bucket,
+  HeaderType header,
+  double height,
+  int assetOffset,
+);
+typedef PhotoGridRowBuilder = Widget Function(
+  BuildContext context,
+  int assetIndex,
+  int assetCount,
+  double tileHeight,
+  double spacing,
+  int columnCount,
+);
 
 /// 核心组合组件：提供高性能照片时间轴网格展示功能。
 /// 
@@ -324,8 +339,6 @@ class _PhotoGridViewState extends State<PhotoGridView> {
                 : widget.groupBy == GroupPhotoBy.year
                 ? GroupAssetsBy.year
                 : GroupAssetsBy.auto,
-            headerBuilder: _buildHeader,
-            rowBuilder: _buildRow,
           );
 
           final List<Segment> generatedSegments = builder.generate();
@@ -387,8 +400,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     final segment = _segments.findByIndex(index);
-                    return segment?.builder(context, index) ??
-                        const SizedBox.shrink();
+                    return _buildSegmentChild(context, segment, index);
                   },
                   childCount: _segments.isNotEmpty
                       ? _segments.last.lastIndex + 1
@@ -404,6 +416,44 @@ class _PhotoGridViewState extends State<PhotoGridView> {
             : RefreshIndicator(onRefresh: widget.onRefresh!, child: listWidget);
       },
     );
+  }
+
+  /// 构建段落中的具体子项（Header 或 Row）。
+  Widget _buildSegmentChild(BuildContext context, Segment? segment, int index) {
+    if (segment == null) return const SizedBox.shrink();
+
+    if (segment is FixedSegment) {
+      if (index == segment.firstIndex) {
+        return _buildHeader(
+          context,
+          segment.bucket,
+          segment.header,
+          segment.headerExtent,
+          segment.firstAssetIndex,
+        );
+      }
+
+      final rowIndexInSegment = index - (segment.firstIndex + 1);
+      final assetIndex = rowIndexInSegment * segment.columnCount;
+      final assetCount = segment.bucket.assetCount;
+
+      // 计算当前行具体包含多少个项（如果是段落最后一行，可能少于 columnCount）
+      int numberOfAssets = segment.columnCount;
+      if (assetIndex + segment.columnCount > assetCount) {
+        numberOfAssets = assetCount - assetIndex;
+      }
+
+      return _buildRow(
+        context,
+        segment.firstAssetIndex + assetIndex,
+        numberOfAssets,
+        segment.tileHeight,
+        segment.spacing,
+        segment.columnCount,
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }
 
