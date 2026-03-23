@@ -30,34 +30,36 @@ class ListViewExample extends StatelessWidget {
           onTap: (item) => handleTap(context, item, controller),
           itemBuilder: buildDummyThumbnail,
           // 这里动态利用控制器来重塑顶层头部
-          topSliver: SliverAppBar(
-            title: Text(isSelecting && selectedCount > 0 ? '已选择 $selectedCount 项' : '复合 SliverAppBar 测试'),
-            pinned: true,
-            expandedHeight: 200.0,
-            leading: isSelecting
-                ? IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () {
-                      controller.clearSelection();
-                      controller.setSelectionActive(false);
-                    },
-                  )
-                : const BackButton(),
-            actions: [
-               if (isSelecting && selectedCount > 0)
-                  IconButton(
-                    icon: const Icon(Icons.check),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('确认提交 $selectedCount 项。')));
-                      controller.clearSelection();
-                      controller.setSelectionActive(false);
-                    },
-                  ),
-            ],
-            flexibleSpace: const FlexibleSpaceBar(
-              background: ColoredBox(color: Colors.blueGrey),
+          topSlivers: [
+            SliverAppBar(
+              title: Text(isSelecting && selectedCount > 0 ? '已选择 $selectedCount 项' : '复合 SliverAppBar 测试'),
+              pinned: true,
+              expandedHeight: 200.0,
+              leading: isSelecting
+                  ? IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        controller.clearSelection();
+                        controller.setSelectionActive(false);
+                      },
+                    )
+                  : const BackButton(),
+              actions: [
+                 if (isSelecting && selectedCount > 0)
+                    IconButton(
+                      icon: const Icon(Icons.check),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('确认提交 $selectedCount 项。')));
+                        controller.clearSelection();
+                        controller.setSelectionActive(false);
+                      },
+                    ),
+              ],
+              flexibleSpace: const FlexibleSpaceBar(
+                background: ColoredBox(color: Colors.blueGrey),
+              ),
             ),
-          ),
+          ],
         );
       },
     );

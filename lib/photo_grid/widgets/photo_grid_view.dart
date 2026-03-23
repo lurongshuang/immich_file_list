@@ -68,8 +68,8 @@ class PhotoGridView extends StatefulWidget {
   /// 项点击回调
   final void Function(PhotoGridItem item)? onTap;
 
-  /// 额外的顶部 Sliver
-  final Widget? topSliver;
+  /// 额外的顶部 Sliver 列表，直接传入 CustomScrollView 以支持独立的吸顶/偏移逻辑。
+  final List<Widget>? topSlivers;
 
   /// 当内部布局信息（如每个项的 Rect）发生变化时触发的回调。
   /// 通常用于外部组件需要知道内部项的精确位置信息时。
@@ -87,7 +87,7 @@ class PhotoGridView extends StatefulWidget {
     this.onSegmentsChanged,
     this.onRefresh,
     this.onTap,
-    this.topSliver,
+    this.topSlivers,
     this.onLayoutInfoChanged,
     required this.itemBuilder,
   });
@@ -394,7 +394,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(), // 确保始终可滚动触发通知
             slivers: [
-              if (widget.topSliver != null) widget.topSliver!,
+              if (widget.topSlivers != null) ...widget.topSlivers!,
               SliverSegmentedList(
                 segments: _segments,
                 delegate: SliverChildBuilderDelegate(

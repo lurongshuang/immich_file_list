@@ -10,6 +10,7 @@ import 'pages/selection_page.dart';
 import 'pages/desktop_adaptive_page.dart';
 import 'pages/desktop_macos_page.dart';
 import 'pages/scrubber_custom_page.dart';
+import 'pages/multi_sliver_example.dart';
 
 void main() {
   runApp(const PhotoGridExampleApp());
@@ -102,6 +103,13 @@ class ExampleHomePage extends StatelessWidget {
             title: const Text('9. 桌面端自适应 (窗口弹性测试)'),
             subtitle: const Text('利用 LayoutBuilder 动态计算列数。支持防抖更新与留白裁剪。'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DesktopAdaptiveExample())),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.layers),
+            title: const Text('10. 复合多 Sliver 视口吸顶 (新)'),
+            subtitle: const Text('演示多个顶部 Sliver 独立工作：AppBar 吸顶而 FilterBar 随动。同时包含滑块交互回调演示。'),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MultiSliverExample())),
           ),
         ],
       ),

@@ -13,7 +13,7 @@ class PhotoGridGallery extends StatefulWidget {
   final GroupPhotoBy groupBy;
   final bool showScrubber;
   final void Function(PhotoGridItem)? onTap;
-  final Widget? topSliver;
+  final List<Widget>? topSlivers;
   final ScrubberLabelBuilder? scrubberLabelBuilder;
   final ScrubberThumbBuilder? scrubberThumbBuilder;
   final ScrubberSegmentBuilder? scrubberSegmentBuilder;
@@ -27,6 +27,12 @@ class PhotoGridGallery extends StatefulWidget {
   final double? scrubberThumbEndOffset;
   final double? scrubberSnapThreshold;
   final bool alwaysShowScrubber;
+  final double? scrubberTopPadding;
+  final double? scrubberBottomPadding;
+  final double? scrubberScrollOffsetBaseline;
+  final VoidCallback? onScrubberDragStart;
+  final VoidCallback? onScrubberDragUpdate;
+  final VoidCallback? onScrubberDragEnd;
   final PhotoGridItemBuilder itemBuilder;
 
   const PhotoGridGallery({
@@ -39,7 +45,7 @@ class PhotoGridGallery extends StatefulWidget {
     this.groupBy = GroupPhotoBy.month,
     this.showScrubber = true,
     this.onTap,
-    this.topSliver,
+    this.topSlivers,
     this.scrubberLabelBuilder,
     this.scrubberThumbBuilder,
     this.scrubberSegmentBuilder,
@@ -53,6 +59,12 @@ class PhotoGridGallery extends StatefulWidget {
     this.scrubberThumbEndOffset,
     this.scrubberSnapThreshold,
     this.alwaysShowScrubber = false,
+    this.scrubberTopPadding,
+    this.scrubberBottomPadding,
+    this.scrubberScrollOffsetBaseline,
+    this.onScrubberDragStart,
+    this.onScrubberDragUpdate,
+    this.onScrubberDragEnd,
     required this.itemBuilder,
   });
 
@@ -150,7 +162,7 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
           onSegmentsChanged: _onSegmentsChanged,
           onLayoutInfoChanged: _onLayoutInfoChanged, // Added this callback
           onTap: widget.onTap,
-          topSliver: widget.topSliver,
+          topSlivers: widget.topSlivers,
           itemBuilder: widget.itemBuilder,
         );
 
@@ -181,8 +193,8 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
             controller: _scrollController,
             segments: _segments,
             timelineHeight: height,
-            topPadding: 50, // 桌面端不需要加 MediaQuery.padding.top
-            bottomPadding: 48.0,
+            topPadding: widget.scrubberTopPadding ?? (MediaQuery.of(context).padding.top + 16.0),
+            bottomPadding: widget.scrubberBottomPadding ?? (MediaQuery.of(context).padding.bottom + 16.0),
             labelBuilder: widget.scrubberLabelBuilder,
             thumbBuilder: widget.scrubberThumbBuilder,
             segmentBuilder: widget.scrubberSegmentBuilder,
@@ -197,6 +209,10 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
             snapThreshold: widget.scrubberSnapThreshold ?? 16.0,
             alwaysShow: widget.alwaysShowScrubber,
             groupBy: widget.groupBy,
+            scrollOffsetBaseline: widget.scrubberScrollOffsetBaseline ?? 0.0,
+            onDragStart: widget.onScrubberDragStart,
+            onDragUpdate: widget.onScrubberDragUpdate,
+            onDragEnd: widget.onScrubberDragEnd,
             child: grid,
           );
         }

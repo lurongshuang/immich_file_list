@@ -11,7 +11,7 @@ const Duration kDefaultScrubberFadeOutDuration = Duration(milliseconds: 2000);
 const double kDefaultScrubberThumbHeight = 48.0;
 const int kDefaultMinMonthsToEnableScrubberSnap = 12;
 const double kDefaultMinSegmentSpacing = 28.0;
-const double kDefaultScrubberSnapThreshold = 16.0;
+const double kDefaultScrubberSnapThreshold = 2.0;
 
 /// 构建气泡标签的函数。当用户拖拽滑块时，会显示该标签。
 typedef ScrubberLabelBuilder = Widget Function(BuildContext context, String label, bool isDragging);
@@ -64,6 +64,14 @@ class PhotoGridScrubber extends StatefulWidget {
   final double snapThreshold;
   /// 聚合维度（年/月）。
   final GroupPhotoBy groupBy;
+  /// 滚动偏移基准值 (例如：顶部 Slivers 的总高度)。用于让滑块仅映射列表内容。
+  final double scrollOffsetBaseline;
+  /// 手势开始拖拽回调。
+  final VoidCallback? onDragStart;
+  /// 手势移动回调。
+  final VoidCallback? onDragUpdate;
+  /// 手势结束拖拽回调。
+  final VoidCallback? onDragEnd;
 
   const PhotoGridScrubber({
     super.key,
@@ -88,6 +96,10 @@ class PhotoGridScrubber extends StatefulWidget {
     this.thumbEndOffset = 0.0,
     this.snapThreshold = kDefaultScrubberSnapThreshold,
     this.groupBy = GroupPhotoBy.month,
+    this.scrollOffsetBaseline = 0.0,
+    this.onDragStart,
+    this.onDragUpdate,
+    this.onDragEnd,
   });
 
   @override
@@ -113,6 +125,7 @@ List<_ScrubberSegment> _buildSegments({
   required double trackHeight,
   required double minSegmentSpacing,
   required GroupPhotoBy groupBy,
+  required double maxScrollExtent, // 新增：真实或估算的滚动范围
 }) {
   if (layoutSegments.isEmpty) return [];
 
@@ -129,14 +142,16 @@ List<_ScrubberSegment> _buildSegments({
   if (displaySegments.isEmpty) return [];
 
   final List<_ScrubberSegment> segments = [];
-  final maxOffset = layoutSegments.last.endOffset;
-  if (maxOffset <= 0) return [];
+  // 必须使用 maxScrollExtent 进行映射，否则滑块自由拖拽与刻度磁吸会发生严重偏移（Flickering）
+  final maxOffset = maxScrollExtent > 0 ? maxScrollExtent : 1.0;
 
   double lastVisibleOffset = -minSegmentSpacing;
 
   final sortedKeys = displaySegments.keys.toList();
   for (final key in sortedKeys) {
     final layoutSegment = displaySegments[key]!;
+    // 采用与滑块拖动一致的映射：startOffset / maxScrollExtent
+    // 如果 startOffset 大于 maxScrollExtent (在最后一页)，则磁吸位置会聚拢在底部，这是符合物理滑块行为的
     final scrollPercentage = (layoutSegment.startOffset / maxOffset).clamp(0.0, 1.0);
     final startOffset = scrollPercentage * trackHeight;
 
@@ -182,7 +197,14 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
     if (!widget.controller.hasClients) return 0.0;
     final pos = widget.controller.position;
     if (!pos.hasContentDimensions || pos.maxScrollExtent <= 0) return 0.0;
-    final percentage = (pos.pixels / pos.maxScrollExtent).clamp(0.0, 1.0);
+    
+    // 映射范围：[baseline, maxScrollExtent]
+    final double maxExt = pos.maxScrollExtent;
+    final double baseline = widget.scrollOffsetBaseline.clamp(0.0, maxExt);
+    final double effectivePixels = (pos.pixels - baseline).clamp(0.0, maxExt - baseline);
+    final double effectiveMax = maxExt - baseline;
+    
+    final percentage = effectiveMax > 0 ? (effectivePixels / effectiveMax) : 0.0;
     return percentage * (_trackHeight - widget.thumbHeight);
   }
 
@@ -200,11 +222,20 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
 
   /// 根据最新的布局段落重新生成背景刻度。
   void _rebuildSegments() {
+    double maxScrollExtent = 0.0;
+    if (widget.controller.hasClients && widget.controller.position.maxScrollExtent > 0) {
+      maxScrollExtent = widget.controller.position.maxScrollExtent;
+    } else if (widget.segments.isNotEmpty) {
+      // 预先估算：总长度 - 视窗高度
+      maxScrollExtent = (widget.segments.last.endOffset - widget.timelineHeight).clamp(0.0, double.infinity);
+    }
+
     _segments = _buildSegments(
       layoutSegments: widget.segments,
       trackHeight: _trackHeight - widget.thumbHeight, // 刻度线也按照滑块行程映射，保证 100% 时对位
       minSegmentSpacing: widget.minSegmentSpacing,
       groupBy: widget.groupBy,
+      maxScrollExtent: maxScrollExtent,
     );
   }
 
@@ -290,6 +321,8 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
       _fadeOutTimer?.cancel();
       _lastLabel = null;
     });
+
+    widget.onDragStart?.call();
   }
 
   /// 手势移动：计算局部映射坐标，执行跳转并处理磁吸。
@@ -301,20 +334,21 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
     // 利用 RenderBox 获取相对于自身的局部坐标，解决 parent 偏移导致的定位不准问题
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
-    
+
     final localPosition = renderBox.globalToLocal(details.globalPosition);
     final relativePosition = localPosition.dy - widget.topPadding;
     final effectiveTrackHeight = _trackHeight - widget.thumbHeight;
-    
+    final maxScrollExtent = widget.controller.position.maxScrollExtent;
+
     // 计算滑块顶部应该在的位置（通过 initial offset 修正）
     double dragTop = (relativePosition - _dragStartOffsetDiff).clamp(0.0, effectiveTrackHeight);
-    
+
     // 磁吸判断：寻找最近的刻度段
     final nearest = _findNearestSegment(dragTop);
     bool snapped = false;
     if (nearest != null) {
       final distance = (dragTop - nearest.startOffset).abs();
-      // 年度试图下磁吸更强
+      // 年度视图下磁吸更强
       final threshold = (widget.groupBy == GroupPhotoBy.year) ? 24.0 : widget.snapThreshold;
       if (distance < threshold) {
         dragTop = nearest.startOffset;
@@ -323,15 +357,22 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
     }
 
     _thumbTopOffset.value = dragTop;
-    final percentage = dragTop / effectiveTrackHeight;
-    
+    final percentage = dragTop / (effectiveTrackHeight > 0 ? effectiveTrackHeight : 1.0);
+
     if (snapped && nearest != null) {
       // 磁吸状态：精确跳转到对应数据段
       _jumpToSegment(nearest);
     } else {
       // 自由状态：按比例跳转百分比
-      widget.controller.jumpTo(percentage * widget.controller.position.maxScrollExtent);
+      final double maxExt = maxScrollExtent;
+      final double baseline = widget.scrollOffsetBaseline.clamp(0.0, maxExt);
+      final double effectiveMax = maxExt - baseline;
+      final double targetPixels = baseline + (percentage * effectiveMax);
+      
+      widget.controller.jumpTo(targetPixels.clamp(0.0, maxExt));
     }
+
+    widget.onDragUpdate?.call();
 
     // 触感反馈：跨越段落时震动
     if (nearest != null && _lastLabel != nearest.scrollLabel) {
@@ -371,6 +412,8 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
     _labelAnimationController.reverse();
     setState(() => _isDragging = false);
     _resetThumbTimer();
+
+    widget.onDragEnd?.call();
   }
 
   @override
@@ -454,16 +497,16 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
                               height: widget.thumbHeight,
                               margin: const EdgeInsets.only(right: 4),
                               decoration: BoxDecoration(
-                                color: _isDragging 
-                                    ? Theme.of(ctx).primaryColor 
+                                color: _isDragging
+                                    ? Theme.of(ctx).primaryColor
                                     : Colors.grey.withAlpha(150),
                                 borderRadius: BorderRadius.circular(10),
-                                boxShadow: _isDragging 
+                                boxShadow: _isDragging
                                     ? [BoxShadow(
-                                        color: Theme.of(ctx).primaryColor.withAlpha(100), 
+                                        color: Theme.of(ctx).primaryColor.withAlpha(100),
                                         blurRadius: 10,
                                         spreadRadius: 2,
-                                      )] 
+                                      )]
                                     : [],
                               ),
                             ),
