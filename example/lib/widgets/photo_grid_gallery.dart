@@ -14,6 +14,19 @@ class PhotoGridGallery extends StatefulWidget {
   final bool showScrubber;
   final void Function(PhotoGridItem)? onTap;
   final Widget? topSliver;
+  final ScrubberLabelBuilder? scrubberLabelBuilder;
+  final ScrubberThumbBuilder? scrubberThumbBuilder;
+  final ScrubberSegmentBuilder? scrubberSegmentBuilder;
+  final Duration? scrubberFadeInDuration;
+  final Duration? scrubberAutoHideDuration;
+  final double? scrubberThumbHeight;
+  final int? scrubberSnapMinMonths;
+  final double? scrubberMinSegmentSpacing;
+  final double? scrubberSegmentEndOffset;
+  final double? scrubberLabelEndOffset;
+  final double? scrubberThumbEndOffset;
+  final double? scrubberSnapThreshold;
+  final bool alwaysShowScrubber;
 
   const PhotoGridGallery({
     super.key,
@@ -26,6 +39,19 @@ class PhotoGridGallery extends StatefulWidget {
     this.showScrubber = true,
     this.onTap,
     this.topSliver,
+    this.scrubberLabelBuilder,
+    this.scrubberThumbBuilder,
+    this.scrubberSegmentBuilder,
+    this.scrubberFadeInDuration,
+    this.scrubberAutoHideDuration,
+    this.scrubberThumbHeight,
+    this.scrubberSnapMinMonths,
+    this.scrubberMinSegmentSpacing,
+    this.scrubberSegmentEndOffset,
+    this.scrubberLabelEndOffset,
+    this.scrubberThumbEndOffset,
+    this.scrubberSnapThreshold,
+    this.alwaysShowScrubber = false,
   });
 
   @override
@@ -35,6 +61,7 @@ class PhotoGridGallery extends StatefulWidget {
 class _PhotoGridGalleryState extends State<PhotoGridGallery> {
   final ScrollController _scrollController = ScrollController();
   List<Segment> _segments = [];
+  Map<String, Rect> _itemLayoutMap = {};
   
   // 用于拖拽选择
   int? _dragAnchorIndex;
@@ -49,6 +76,14 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
     if (mounted) {
       setState(() {
         _segments = segments;
+      });
+    }
+  }
+
+  void _onLayoutInfoChanged(Map<String, Rect> layoutMap) {
+    if (mounted) {
+      setState(() {
+        _itemLayoutMap = layoutMap;
       });
     }
   }
@@ -98,40 +133,78 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
 
   @override
   Widget build(BuildContext context) {
-    Widget grid = PhotoGridView(
-      items: widget.items,
-      assetsPerRow: widget.assetsPerRow,
-      margin: widget.margin,
-      childAspectRatio: widget.childAspectRatio,
-      groupBy: widget.groupBy,
-      selectionController: widget.selectionController,
-      controller: _scrollController,
-      onSegmentsChanged: _onSegmentsChanged,
-      onTap: widget.onTap,
-      topSliver: widget.topSliver,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final height = constraints.maxHeight;
+
+        Widget grid = PhotoGridView(
+          items: widget.items,
+          assetsPerRow: widget.assetsPerRow,
+          margin: widget.margin,
+          childAspectRatio: widget.childAspectRatio,
+          groupBy: widget.groupBy,
+          selectionController: widget.selectionController,
+          controller: _scrollController,
+          onSegmentsChanged: _onSegmentsChanged,
+          onLayoutInfoChanged: _onLayoutInfoChanged, // Added this callback
+          onTap: widget.onTap,
+          topSliver: widget.topSliver,
+        );
+
+        // 包装拖拽选择区域
+        grid = PhotoDragRegion(
+          onStart: _setDragStartIndex,
+          onAssetEnter: _handleDragAssetEnter,
+          onEnd: _stopDrag,
+          onScroll: _dragScroll,
+          child: grid,
+        );
+
+        // 包装桌面端特有的键鼠交互
+        if (widget.selectionController != null) {
+          grid = PhotoDesktopSelectionRegion(
+            selectionController: widget.selectionController!,
+            allItemIds: widget.items.map((e) => e.id).toList(),
+            assetsPerRow: widget.assetsPerRow,
+            scrollController: _scrollController,
+            itemLayoutMap: _itemLayoutMap, // Passed to PhotoDesktopSelectionRegion
+            child: grid,
+          );
+        }
+
+        // 如果启用，包装滑动条
+        if (widget.showScrubber && widget.items.length >= 20 && _segments.isNotEmpty) {
+          grid = PhotoGridScrubber(
+            controller: _scrollController,
+            segments: _segments,
+            timelineHeight: height,
+            topPadding: 50, // 桌面端不需要加 MediaQuery.padding.top
+            bottomPadding: 48.0,
+            labelBuilder: widget.scrubberLabelBuilder,
+            thumbBuilder: widget.scrubberThumbBuilder,
+            segmentBuilder: widget.scrubberSegmentBuilder,
+            fadeInDuration: widget.scrubberFadeInDuration ?? const Duration(milliseconds: 150),
+            autoHideDuration: widget.scrubberAutoHideDuration ?? const Duration(milliseconds: 2000),
+            thumbHeight: widget.scrubberThumbHeight ?? 48.0,
+            snapMinMonths: widget.scrubberSnapMinMonths ?? 12,
+            minSegmentSpacing: widget.scrubberMinSegmentSpacing ?? 28.0,
+            segmentEndOffset: widget.scrubberSegmentEndOffset ?? 100.0,
+            labelEndOffset: widget.scrubberLabelEndOffset ?? 12.0,
+            thumbEndOffset: widget.scrubberThumbEndOffset ?? 0.0,
+            snapThreshold: widget.scrubberSnapThreshold ?? 16.0,
+            alwaysShow: widget.alwaysShowScrubber,
+            groupBy: widget.groupBy,
+            child: grid,
+          );
+        }
+
+        // 在桌面端，默认的 Scrollbar 可能会与我们自定义的冲突，
+        // 这里通过 ScrollConfiguration 禁用默认滚动条。
+        return ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: grid,
+        );
+      },
     );
-
-    // 包装拖拽选择区域
-    grid = PhotoDragRegion(
-      onStart: _setDragStartIndex,
-      onAssetEnter: _handleDragAssetEnter,
-      onEnd: _stopDrag,
-      onScroll: _dragScroll,
-      child: grid,
-    );
-
-    // 如果启用，包装滑动条
-    if (widget.showScrubber && widget.items.length >= 20 && _segments.isNotEmpty) {
-      grid = PhotoGridScrubber(
-        controller: _scrollController,
-        segments: _segments,
-        timelineHeight: MediaQuery.of(context).size.height,
-        topPadding: MediaQuery.of(context).padding.top + 50,
-        bottomPadding: MediaQuery.of(context).padding.bottom + 48.0,
-        child: grid,
-      );
-    }
-
-    return grid;
   }
 }

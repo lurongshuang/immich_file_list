@@ -20,9 +20,10 @@ class PhotoGridItemIndex {
   int get hashCode => offset.hashCode;
 }
 
-/// 滑动框选的专门感应与计算容器。
+/// [PhotoDragRegion] 是滑动框选的专门感应与计算容器。
 ///
-/// 它包裹整个照片网格，监听长按 (`onLongPress`) 与随后的拖拽手势 (Pan)。
+/// 它包裹整个照片网格，监听长按 (`onLongPress`) 与随后的拖拽手势 (Drag)，从而执行类似
+/// 手机系统相册的多选滑动交互，支持跨屏幕连续选中/反选。
 /// 通过与内层的 [PhotoGridItemIndexWrapper] 配合，它可以精准获知用户长按时选中的起始项，
 /// 以及拖拽过程中手指划过的所有项的 `offset`，并抛出给顶层容器。
 class PhotoDragRegion extends StatefulWidget {

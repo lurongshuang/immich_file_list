@@ -2,67 +2,121 @@
 
 一个专为高性能相册体验设计的 Flutter 插件库。支持超大数据量（万级）的顺滑滚动、分级别逻辑吸附、多端自适应布局以及极致的 60FPS 渲染优化。
 
-## 核心组件概览
-
-### 1. PhotoGridView
-**使用场景**：
-相册列表的主体展示组件。适用于需要按时间（日/月）分组、支持极速侧边导航（Scrubber）以及大规模数据渲染的场景。
-
-**主要属性介绍**：
-| 属性名 | 类型 | 默认值 | 描述 |
-| :--- | :--- | :--- | :--- |
-| `items` | `List<PhotoGridItem>` | **必填** | 待渲染的元素集合，需实现 `PhotoGridItem` 接口。 |
-| `assetsPerRow` | `int` | `4` | 每行展示的缩略图数量。 |
-| `margin` | `double` | `3.0` | 宫格项之间的间距。 |
-| `childAspectRatio` | `double` | `1.0` | 项的纵横比。`1.0` 为正方形，较大值适用于列表形态。 |
-| `groupBy` | `GroupPhotoBy` | `month` | 分组规则：`day` (按日), `month` (按月), `none` (不分组)。 |
-| `selectionController` | `PhotoSelectionController?` | `null` | 选中状态控制器，用于开启多选/拖拽选择功能。 |
-| `showDragScroll` | `bool` | `true` | 是否显示右侧的悬浮日期滑块（Scrubber）。 |
-| `topSliver` | `Widget?` | `null` | 顶部插入的自定义 Sliver（如 `SliverAppBar`），随列表联动。 |
-| `onTap` | `Function(PhotoGridItem)?` | `null` | 点击项的回调。 |
+> [!IMPORTANT]
+> **Desktop Pro 核心升级**：现已深度支持 **专业级桌面端交互**，通过几何算力实现像素级的框选、键盘连选与自动滚动。
 
 ---
 
-### 2. AdaptiveContainer
-**使用场景**：
-专门用于**桌面端或 Web 端**。当用户拉伸窗口边缘时，该组件作为“稳定容器”，防止内部组件随拉伸频繁重绘。
+## 🚀 核心特性
 
-**主要属性介绍**：
-| 属性名 | 类型 | 默认值 | 描述 |
-| :--- | :--- | :--- | :--- |
-| `builder` | `Widget Function(context, width)` | **必填** | 内容构建回调。仅在宽度稳定后触发，返回最新的稳定宽度供内部计算（如计算列数）。 |
-| `debounceDuration` | `Duration` | `300ms` | 防抖时长。停止拖动该时间后才会触发 `builder`。 |
-
-**特性**：拖拽过程中自动处理“留白”与“裁剪”，确保视觉上不会因列数闪烁而感到乱。
-
----
-
-### 3. PhotoSelectionController
-**使用场景**：
-多选逻辑的“指挥中心”。用于手动代码控制选中项、监听选中数量变化、开启/关闭选择模式。
-
-**常用方法/属性**：
-- `isSelectionActive`: 当前是否处于多选状态。
-- `selectedIds`: 当前已选中的 ID 集合。
-- `toggleItem(id)`: 切换某个 ID 的选中状态。
-- `clearSelection()`: 清空所有选择。
-- `setSelectionActive(bool)`: 切换选择模式开关。
+- **极致性能**：基于分段渲染（Segmented Rendering）与视口外缓存，轻松应对 100,000+ 照片数据的秒级加载与顺滑滚动。
+- **专业级桌面方案 (PRO)**：
+  - **全量圈选**：支持跨视口框选，即使项已滑出屏幕，选中状态依然精准保持。
+  - **键鼠联动**：方向键导航配合主从模式，支持 Shift/Ctrl 修饰键，模拟原生 macOS Finder 体验。
+  - **强力焦点管理**：内置 Focus 拦截系统，防止导航时焦点意外溢出到页面其他组件。
+  - **自动跟随滚动**：拖拽至边界或键盘切换到视口外时，系统自动智能补正滚动位置。
+- **解耦式架构**：核心展示（Grid）、手势交互（Region）、状态管理（Controller）高度解耦，支持自由插拔。
+- **多端适配**：内置 `AdaptiveContainer` 配合双缓冲计算，解决桌面端拉伸窗口时的重复 Layout 抖动。
 
 ---
 
-### 4. PhotoGridItem (Interface)
-**使用场景**：
-数据模型接口。您的业务数据模型需要实现此接口才能被组件库识别。
+## 📂 项目架构
 
-**要求实现方法**：
-- `id`: 唯一标识符。
-- `dateTime`: 用于排序和分组的时间戳。
-- `itemBuilder(context, size)`: 定义该项如何被渲染（返回 Widget）。
+```mermaid
+graph TD
+    A[PhotoSelectionController] --- B[PhotoDesktopSelectionRegion]
+    B --- C[PhotoGridView]
+    C --- D[SliverSegmentedList]
+    C --- E[PhotoGridScrubber]
+    A --- C
+```
 
-## 性能优化建议
-1. **Scrubber 隔离**：由于组件内部使用了 `ValueNotifier` 监听，滑动 Scrubber 时**不会**触发整个列表的 `build`。
-2. **Segment 缓存**：按月/日分组后的片段会自动缓存，确保万级数据量下滚动依然保持 60FPS。
-3. **AdaptiveContainer**：在桌面端布局时，请务必使用此容器，可大幅减少 GPU 负担。
+---
 
-## 快速开始
-参考 `example/lib/pages/` 目录下的 7 个独立模块化案例，涵盖了从基础滑动到复杂自适应的所有场景。
+## 📦 核心组件 API
+
+### 1. PhotoGridView (展示核心)
+负责高性能网格渲染与时间轴逻辑。
+
+| 属性名 | 类型 | 描述 |
+| :--- | :--- | :--- |
+| `items` | `List<PhotoGridItem>` | **必填**。需实现 `PhotoGridItem` 接口。 |
+| `assetsPerRow` | `int` | 每行显示的列数，支持实时滑动调整。 |
+| `margin` | `double` | 图片间距。 |
+| `childAspectRatio` | `double` | 图片长宽比（正方形建议 1.0）。 |
+| `groupBy` | `GroupPhotoBy` | 分组策略（按日/按月/无）。 |
+| `topSliver` | `Widget?` | 顶部插入的自定义 Sliver 容器。 |
+| `onLayoutInfoChanged` | `Function(Map)` | **关键**。将内部几何 Rects 同步给交互层。 |
+
+### 2. PhotoDesktopSelectionRegion (桌面交互)
+包装在 Grid 之上的交互层，拦截原始手势。
+
+| 功能 | 描述 |
+| :--- | :--- |
+| **鼠标圈选** | 实现逻辑坐标系下的框选算法。 |
+| **键盘导航** | `Focus` 驱动的方向键移动及焦点环展示。 |
+| **修饰键** | 系统级 Shift (范围) / Ctrl(Cmd) (单选/反选) 逻辑。 |
+| **长按支持** | 兼容触控设备的长按激活。 |
+
+### 3. PhotoGridScrubber (侧边滑块)
+独立的悬浮日期滑块，支持拖拽快速定位。
+
+### 4. AdaptiveContainer (自适应布局)
+处理桌面端窗口缩放，提供防抖（Debounce）后的稳定宽度回调。
+
+---
+
+## 🛠️ 快速集成
+
+### 第一步：实现数据接口
+```dart
+class MyAsset implements PhotoGridItem {
+  @override String get id => 'asset_id';
+  @override DateTime get date => DateTime.now();
+  
+  @override
+  Widget itemBuilder(BuildContext context, double size) {
+    return Image.network(url, width: size, height: size, fit: BoxFit.cover);
+  }
+}
+```
+
+### 第二步：组合 UI
+```dart
+final selectionController = PhotoSelectionController();
+
+@override
+Widget build(BuildContext context) {
+  return PhotoDesktopSelectionRegion(
+    selectionController: selectionController,
+    allItemIds: items.map((e) => e.id).toList(),
+    child: PhotoGridView(
+      items: items,
+      selectionController: selectionController,
+      onLayoutInfoChanged: (map) {
+         // 可选：PhotoGridGallery 已内置此同步逻辑
+      },
+    ),
+  );
+}
+```
+
+---
+
+## 💡 进阶优化建议
+
+1. **几何算力优化**：在 Windows/macOS 端，默认开启 `onLayoutInfoChanged` 同步，这是实现滑出视口依然保持选中的核心。
+2. **列表隔离**：将顶部导航（AppBar）与照片库隔离，确保网格重排时不会引起顶层不必要的 Build。
+3. **状态管理**：建议全局共用一个 `PhotoSelectionController` 实例以支持跨页面的选择模式回传。
+
+---
+
+## 📖 演示案例
+项目 `example/` 目录下涵盖 7+ 独立案例：
+- **Desktop MacOS PRO** (`desktop_macos_page.dart`): 模拟 macOS 访达交互的最佳实践。
+- **Dynamic Layout**: 演示实时调整列数、间距对性能的 0 损耗。
+
+---
+
+## 许可证
+MIT License.

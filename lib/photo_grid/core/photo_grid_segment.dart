@@ -1,9 +1,9 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 
-enum GroupAssetsBy { day, month, auto, none }
+enum GroupAssetsBy { day, month, year, auto, none }
 
-enum HeaderType { none, month, day, monthAndDay }
+enum HeaderType { none, year, month, day, monthAndDay }
 
 /// 分组渲染的数据桶抽象基类，用于承载一簇相同条件（如同一天）的照片数量。
 abstract class Bucket {
@@ -58,10 +58,14 @@ abstract class Segment {
   bool containsIndex(int index) => firstIndex <= index && index <= lastIndex;
   bool isWithinOffset(double offset) => startOffset <= offset && offset <= endOffset;
 
+  /// 将给定的滚动偏移量转换为该段落内的最小子项索引。
   int getMinChildIndexForScrollOffset(double scrollOffset);
+  /// 将给定的滚动偏移量转换为该段落内的最大子项索引。
   int getMaxChildIndexForScrollOffset(double scrollOffset);
+  /// 将子项索引转换为绝对布局偏移。
   double indexToLayoutOffset(int index);
 
+  /// 构建视图项的 Builder。
   Widget builder(BuildContext context, int index);
 }
 
@@ -127,7 +131,7 @@ class FixedSegment extends Segment {
     final rowIndexInSegment = index - (firstIndex + 1);
     final assetIndex = rowIndexInSegment * columnCount;
     final assetCount = bucket.assetCount;
-    // How many assets specifically in this row (might be less than columnCount at the end of a group)
+    // 计算当前行具体包含多少个项（如果是段落最后一行，可能少于 columnCount）
     int numberOfAssets = columnCount;
     if (assetIndex + columnCount > assetCount) {
       numberOfAssets = assetCount - assetIndex;
@@ -166,6 +170,8 @@ class FixedSegmentBuilder {
   static double headerExtent(HeaderType header) {
     const double kTimelineHeaderExtent = 80.0;
     switch (header) {
+      case HeaderType.year:
+        return kTimelineHeaderExtent * 1.2;
       case HeaderType.month:
         return kTimelineHeaderExtent;
       case HeaderType.day:
@@ -177,6 +183,8 @@ class FixedSegmentBuilder {
     }
   }
 
+  /// 执行段落预计算生成。
+  /// 此函数会遍历所有 Bucket，根据分组规则计算每个 Segment 的索引范围和偏移量。
   List<Segment> generate() {
     final segments = <Segment>[];
     int firstIndex = 0;
@@ -196,6 +204,9 @@ class FixedSegmentBuilder {
 
       HeaderType timelineHeader;
       switch (groupBy) {
+        case GroupAssetsBy.year:
+          timelineHeader = HeaderType.year;
+          break;
         case GroupAssetsBy.month:
           timelineHeader = HeaderType.month;
           break;

@@ -50,11 +50,15 @@ class PhotoGridView extends StatefulWidget {
   /// 额外的顶部 Sliver
   final Widget? topSliver;
 
+  /// 当内部布局信息（如每个项的 Rect）发生变化时触发的回调。
+  /// 通常用于外部组件需要知道内部项的精确位置信息时。
+  final void Function(Map<String, Rect>)? onLayoutInfoChanged;
+
   const PhotoGridView({
     super.key,
     required this.items,
     this.assetsPerRow = 4,
-    this.margin = 3.0,
+    this.margin = 4.0,
     this.childAspectRatio = 1.0,
     this.groupBy = GroupPhotoBy.month,
     this.selectionController,
@@ -63,6 +67,7 @@ class PhotoGridView extends StatefulWidget {
     this.onRefresh,
     this.onTap,
     this.topSliver,
+    this.onLayoutInfoChanged,
   });
 
   @override
@@ -77,6 +82,9 @@ class _PhotoGridViewState extends State<PhotoGridView> {
   List<Segment> _segments = [];
 
   double? _lastMaxWidth;
+  int? _lastAssetsPerRow;
+  double? _lastMargin;
+  double? _lastAspectRatio;
   List<Segment>? _cachedSegments;
 
   @override
@@ -106,7 +114,10 @@ class _PhotoGridViewState extends State<PhotoGridView> {
       }
     }
     if (oldWidget.items != widget.items ||
-        oldWidget.groupBy != widget.groupBy) {
+        oldWidget.groupBy != widget.groupBy ||
+        oldWidget.assetsPerRow != widget.assetsPerRow ||
+        oldWidget.margin != widget.margin ||
+        oldWidget.childAspectRatio != widget.childAspectRatio) {
       _rebuildRenderList();
     }
   }
@@ -135,6 +146,8 @@ class _PhotoGridViewState extends State<PhotoGridView> {
         } else if (widget.groupBy == GroupPhotoBy.month) {
           sameGroup =
               date.year == currentDate.year && date.month == currentDate.month;
+        } else if (widget.groupBy == GroupPhotoBy.year) {
+          sameGroup = date.year == currentDate.year;
         }
 
         if (sameGroup) {
@@ -151,6 +164,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     }
   }
 
+  /// 构建时间轴段落的头部标题。
   Widget _buildHeader(
     BuildContext context,
     Bucket bucket,
@@ -159,8 +173,14 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     int assetOffset,
   ) {
     if (bucket is TimeBucket) {
-      String title = '${bucket.date.year}年${bucket.date.month}月';
-      if (type == HeaderType.day || type == HeaderType.monthAndDay) {
+      if (assetOffset < 0 || assetOffset >= widget.items.length) {
+        return SizedBox(height: height);
+      }
+
+      String title = '${bucket.date.year}年度';
+      if (type == HeaderType.month) {
+        title = '${bucket.date.year}年${bucket.date.month}月';
+      } else if (type == HeaderType.day || type == HeaderType.monthAndDay) {
         title = '${bucket.date.year}年${bucket.date.month}月${bucket.date.day}日';
       }
 
@@ -169,6 +189,11 @@ class _PhotoGridViewState extends State<PhotoGridView> {
         assetOffset + bucket.assetCount,
         widget.items.length,
       );
+
+      if (startIndex >= endIndex) {
+         return SizedBox(height: height);
+      }
+
       final sectionIds = widget.items
           .sublist(startIndex, endIndex)
           .map((e) => e.id)
@@ -224,6 +249,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     return SizedBox(height: height);
   }
 
+  /// 构建网格中的一行照片。
   Widget _buildRow(
     BuildContext context,
     int assetIndex,
@@ -232,7 +258,15 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     double spacing,
     int columnCount,
   ) {
+    if (assetIndex < 0 || assetIndex >= widget.items.length) {
+      return const SizedBox.shrink();
+    }
     final end = min(assetIndex + count, widget.items.length);
+
+    if (assetIndex >= end) {
+      return const SizedBox.shrink();
+    }
+
     // tileWidth can simply be derived from constraints if needed, but since AssetRow is built inside _buildGrid,
     // we can calculate the tile Width by aspectRatio. 
     final tileWidth = tileHeight * widget.childAspectRatio;
@@ -257,34 +291,78 @@ class _PhotoGridViewState extends State<PhotoGridView> {
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
 
-        if (_cachedSegments != null && _lastMaxWidth == screenWidth && _buckets.isNotEmpty) {
+        if (_cachedSegments != null && 
+            _lastMaxWidth == screenWidth && 
+            _lastAssetsPerRow == widget.assetsPerRow &&
+            _lastMargin == widget.margin &&
+            _lastAspectRatio == widget.childAspectRatio &&
+            _buckets.isNotEmpty) {
            _segments = _cachedSegments!;
         } else {
-          final rowSpacing = widget.margin * (widget.assetsPerRow - 1);
-          final double tileWidth = (screenWidth - rowSpacing) / widget.assetsPerRow;
+          final double spacing = widget.margin;
+          final int columnCount = (screenWidth / (screenWidth / widget.assetsPerRow)).floor();
+          final double tileWidth = (screenWidth - (columnCount - 1) * spacing) / columnCount;
           final double tileHeight = tileWidth / widget.childAspectRatio;
 
           final builder = FixedSegmentBuilder(
             buckets: _buckets,
             tileHeight: tileHeight,
-            columnCount: widget.assetsPerRow,
-            spacing: widget.margin,
+            columnCount: columnCount,
+            spacing: spacing,
             groupBy: widget.groupBy == GroupPhotoBy.day
                 ? GroupAssetsBy.day
                 : widget.groupBy == GroupPhotoBy.month
                 ? GroupAssetsBy.month
+                : widget.groupBy == GroupPhotoBy.year
+                ? GroupAssetsBy.year
                 : GroupAssetsBy.auto,
             headerBuilder: _buildHeader,
             rowBuilder: _buildRow,
           );
 
-          _segments = builder.generate();
+          final List<Segment> generatedSegments = builder.generate();
+          
+          // 计算全量项的布局坐标用于桌面端圈选持久化
+          final Map<String, Rect> layoutMap = {};
+          for (final segment in generatedSegments) {
+            if (segment is FixedSegment) {
+               final assetCount = segment.bucket.assetCount;
+               final rows = (assetCount / segment.columnCount).ceil();
+               final startAssetIndex = segment.firstAssetIndex;
+               
+               for (int r = 0; r < rows; r++) {
+                 final rowY = segment.gridOffset + (r * (segment.tileHeight + segment.spacing));
+                 final rowStartAsset = startAssetIndex + (r * segment.columnCount);
+                 final rowCount = min(segment.columnCount, assetCount - (r * segment.columnCount));
+                 
+                 for (int c = 0; c < rowCount; c++) {
+                   final assetIndex = rowStartAsset + c;
+                   if (assetIndex < widget.items.length) {
+                     final item = widget.items[assetIndex];
+                     final x = c * (tileWidth + spacing);
+                     layoutMap[item.id] = Rect.fromLTWH(x, rowY, tileWidth, tileHeight);
+                   }
+                 }
+               }
+            }
+          }
+
+          _segments = generatedSegments;
           _cachedSegments = _segments;
           _lastMaxWidth = screenWidth;
+          _lastAssetsPerRow = widget.assetsPerRow;
+          _lastMargin = widget.margin;
+          _lastAspectRatio = widget.childAspectRatio;
           
           if (widget.onSegmentsChanged != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
                widget.onSegmentsChanged?.call(_segments);
+            });
+          }
+
+          if (widget.onLayoutInfoChanged != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+               widget.onLayoutInfoChanged?.call(layoutMap);
             });
           }
         }
@@ -292,6 +370,8 @@ class _PhotoGridViewState extends State<PhotoGridView> {
         final listWidget = PrimaryScrollController(
           controller: _scrollController,
           child: CustomScrollView(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(), // 确保始终可滚动触发通知
             slivers: [
               if (widget.topSliver != null) widget.topSliver!,
               SliverSegmentedList(
@@ -359,9 +439,9 @@ class _AssetRow extends StatelessWidget {
               child: selectionController != null
                   ? AnimatedBuilder(
                       animation: selectionController!,
-                      builder: (context, _) => _buildItemContent(context, item),
+                      builder: (context, _) => _buildItemContent(context, item, offsetIndex),
                     )
-                  : _buildItemContent(context, item),
+                  : _buildItemContent(context, item, offsetIndex),
             ),
           ),
         );
@@ -371,14 +451,16 @@ class _AssetRow extends StatelessWidget {
     );
   }
 
-  Widget _buildItemContent(BuildContext context, PhotoGridItem item) {
+  /// 构建具体的单项内容（缩略图、选中遮罩、焦点环等）。
+  Widget _buildItemContent(BuildContext context, PhotoGridItem item, int absoluteOffset) {
     final bool selectionActive = selectionController?.isSelectionActive ?? false;
     final bool isSelected = selectionController?.selectedIds.contains(item.id) ?? false;
+    final bool isFocused = selectionController?.focusedIndex == absoluteOffset;
 
     return GestureDetector(
       onTap: () {
         if (selectionActive) {
-          selectionController!.toggleItem(item.id);
+          selectionController!.toggleItem(item.id, index: absoluteOffset);
         } else {
           onTap?.call(item);
         }
@@ -387,16 +469,27 @@ class _AssetRow extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           item.buildThumbnail(context),
-          if (selectionActive)
+          // 选中遮罩
+          if (selectionActive || isSelected)
             Container(
               color: isSelected
-                  ? Colors.black.withAlpha(102)
+                  ? (Theme.of(context).primaryColor.withAlpha(50))
                   : Colors.transparent,
               alignment: Alignment.topLeft,
               padding: const EdgeInsets.all(4.0),
-              child: Icon(
+              child: selectionActive ? Icon(
                 isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
                 color: isSelected ? Theme.of(context).primaryColor : Colors.white70,
+              ) : null,
+            ),
+          // 焦点环 (macOS 风格)
+          if (isFocused)
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Theme.of(context).primaryColor,
+                  width: 3.0,
+                ),
               ),
             ),
         ],

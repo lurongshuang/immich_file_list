@@ -7,6 +7,8 @@ enum GroupPhotoBy {
   day,
   /// 按月聚合：每一个自然月生成一个新的 Date Bucket 头。
   month,
+  /// 按年聚合：每一个自然年生成一个新的 Date Bucket 头。
+  year,
   /// 不做任何聚合：传统的全平铺流水列表。
   none,
 }

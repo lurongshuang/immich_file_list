@@ -14,38 +14,76 @@ class PhotoSelectionController extends ChangeNotifier {
   bool _isSelectionActive = false;
   
   /// 当前是否处于多选激活模式。
-  /// 通常在用户长按某张照片，或点击右上角“选择”按钮时，由宿主将其设置为 true。
   bool get isSelectionActive => _isSelectionActive;
+
+  /// 当前处于焦点（Focus ring）状态的项目角标。用于键盘导航。
+  int? _focusedIndex;
+  int? get focusedIndex => _focusedIndex;
+
+  /// 上一次用户手动点击（非拖拽）选中的项目角标。作为 Shift 连选的基点锚点。
+  int? _selectionAnchorIndex;
+  int? get selectionAnchorIndex => _selectionAnchorIndex;
 
   bool _isDragSelecting = true;
   Set<String> _baseSelectedIds = {};
 
-  /// 明确开启或关闭多选模式。
-  ///
-  /// 如果由于关闭行为退出多选模式，会自动清空已选中的图片。
-  void setSelectionActive(bool active) {
-    if (_isSelectionActive != active) {
-      _isSelectionActive = active;
-      if (!active) _selectedIds.clear();
+  /// 更新焦点角标。
+  void setFocusedIndex(int? index) {
+    if (_focusedIndex != index) {
+      _focusedIndex = index;
       notifyListeners();
     }
   }
 
-  /// 翻转单张照片的选择状态 (选中转未选，未选转选中)
-  /// 仅在单点模式下调用。
-  void toggleItem(String id) {
+  /// 明确开启或关闭多选模式。
+  void setSelectionActive(bool active) {
+    if (_isSelectionActive != active) {
+      _isSelectionActive = active;
+      if (!active) {
+        _selectedIds.clear();
+        _selectionAnchorIndex = null;
+      }
+      notifyListeners();
+    }
+  }
+
+  /// 翻转单张照片的选择状态。
+  /// [index] 可选，用于更新锚点位置。
+  void toggleItem(String id, {int? index}) {
     if (_selectedIds.contains(id)) {
       _selectedIds.remove(id);
     } else {
       _selectedIds.add(id);
+      if (index != null) _selectionAnchorIndex = index;
+    }
+    notifyListeners();
+  }
+
+  /// 选中单张照片。
+  void selectItem(String id, {int? index}) {
+    _selectedIds.add(id);
+    if (index != null) _selectionAnchorIndex = index;
+    notifyListeners();
+  }
+
+  /// 连选范围内的项目。
+  /// [allIds] 是完整的、有序的 ID 列表，用于获取 [start] 到 [end] 的元素。
+  /// [additive] 为 true 时，保留之前的选中状态；为 false 时，先清空。
+  void selectRange(int start, int end, List<String> allIds, {bool additive = false}) {
+    if (!additive) _selectedIds.clear();
+    
+    final s = start < end ? start : end;
+    final e = start > end ? start : end;
+
+    for (int i = s; i <= e; i++) {
+      if (i >= 0 && i < allIds.length) {
+        _selectedIds.add(allIds[i]);
+      }
     }
     notifyListeners();
   }
 
   /// 拖拽框选开始。
-  ///
-  /// [anchorId] 是用户手指按下的起始项（抛锚点）。
-  /// 引擎会根据起始项当前的选中状态，智能判断接下来的划动行为是“批量选择”还是“批量反选”。
   void startDragSelection(String anchorId) {
     if (!_isSelectionActive) {
       _isSelectionActive = true;
@@ -62,9 +100,6 @@ class PhotoSelectionController extends ChangeNotifier {
   }
 
   /// 拖拽范围更新。
-  ///
-  /// [affectedIds] 表示滑动边界框所覆盖的当前全部 ID。
-  /// 引擎会自动将其覆盖到 [startDragSelection] 时记录的 _baseSelectedIds 快照上。
   void updateDragSelection(Set<String> affectedIds) {
     _selectedIds.clear();
     _selectedIds.addAll(_baseSelectedIds);
@@ -78,7 +113,6 @@ class PhotoSelectionController extends ChangeNotifier {
   }
 
   /// 释放手指，结束拖拽框选过程。
-  /// 会清理底层缓存的选中快照。
   void endDragSelection() {
     _baseSelectedIds.clear();
   }
@@ -92,6 +126,7 @@ class PhotoSelectionController extends ChangeNotifier {
   /// 清空当前选中列表
   void clearSelection() {
     _selectedIds.clear();
+    _selectionAnchorIndex = null;
     notifyListeners();
   }
 }

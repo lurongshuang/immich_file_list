@@ -8,6 +8,8 @@ import 'pages/normal_list_page.dart';
 import 'pages/list_view_page.dart';
 import 'pages/selection_page.dart';
 import 'pages/desktop_adaptive_page.dart';
+import 'pages/desktop_macos_page.dart';
+import 'pages/scrubber_custom_page.dart';
 
 void main() {
   runApp(const PhotoGridExampleApp());
@@ -80,10 +82,24 @@ class ExampleHomePage extends StatelessWidget {
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SelectionExample())),
           ),
 
-          _buildCategoryHeader('桌面端测试 (Desktop)'),
+          _buildCategoryHeader('桌面端专用测试 (Desktop)'),
+          ListTile(
+            leading: const Icon(Icons.mouse),
+            title: const Text('7. 桌面级 macOS 交互方案 (框选/键鼠/自动滚动)'),
+            subtitle: const Text('支持鼠标左键在空白处框选。支持 Shift 连选、Ctrl 增选、方向键焦点导航。媲美系统级体验。'),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DesktopMacOSExample())),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.style),
+            title: const Text('8. Scrubber 自定义样式大赏'),
+            subtitle: const Text('演示如何通过 Builder 完全重写滑动条与气泡的视觉风格。包含现代玻璃拟态、iOS 与 Google 风格。'),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScrubberCustomExample())),
+          ),
+          const Divider(),
           ListTile(
             leading: const Icon(Icons.desktop_windows),
-            title: const Text('7. 桌面端自适应 (留白测试)'),
+            title: const Text('9. 桌面端自适应 (窗口弹性测试)'),
             subtitle: const Text('利用 LayoutBuilder 动态计算列数。支持防抖更新与留白裁剪。'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DesktopAdaptiveExample())),
           ),
