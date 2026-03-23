@@ -34,6 +34,7 @@ class DesktopAdaptiveExample extends StatelessWidget {
               showScrubber: true,
               selectionController: controller,
               onTap: (item) => handleTap(context, item, controller),
+              itemBuilder: buildDummyThumbnail,
             );
           },
         );

@@ -17,12 +17,13 @@ class BasicScrubberExample extends StatelessWidget {
       items: DummyDataFactory.generateDummyData(5, 500),
       builder: (context, items, controller) => PhotoGridGallery(
         items: items,
-        assetsPerRow: 4,               
-        margin: 2.0,                   
-        groupBy: GroupPhotoBy.month,   
+        assetsPerRow: 4,
+        margin: 2.0,
+        groupBy: GroupPhotoBy.month,
         showScrubber: true,
         selectionController: controller,
         onTap: (item) => handleTap(context, item, controller),
+        itemBuilder: buildDummyThumbnail,
       ),
     );
   }

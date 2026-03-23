@@ -18,39 +18,41 @@ class DummyPhotoItem implements PhotoGridItem {
     this.title = '',
     this.isVideo = false,
   });
+}
 
-  @override
-  Widget buildThumbnail(BuildContext context) {
-    return Container(
-      color: color,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Center(
+/// 示例 UI 构建器：将 DummyPhotoItem 渲染为网格项。
+Widget buildDummyThumbnail(BuildContext context, PhotoGridItem item) {
+  if (item is! DummyPhotoItem) return const SizedBox();
+  
+  return Container(
+    color: item.color,
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        Center(
+          child: Text(
+            item.id,
+            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          ),
+        ),
+        if (item.title.isNotEmpty)
+          Positioned(
+            bottom: 4,
+            left: 4,
             child: Text(
-              id,
-              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              item.title,
+              style: const TextStyle(color: Colors.white, fontSize: 10, backgroundColor: Colors.black45),
             ),
           ),
-          if (title.isNotEmpty)
-            Positioned(
-              bottom: 4,
-              left: 4,
-              child: Text(
-                title,
-                style: const TextStyle(color: Colors.white, fontSize: 10, backgroundColor: Colors.black45),
-              ),
-            ),
-          if (isVideo)
-            const Positioned(
-              top: 4,
-              right: 4,
-              child: Icon(Icons.play_circle_outline, color: Colors.white, size: 16),
-            ),
-        ],
-      ),
-    );
-  }
+        if (item.isVideo)
+          const Positioned(
+            top: 4,
+            right: 4,
+            child: Icon(Icons.play_circle_outline, color: Colors.white, size: 16),
+          ),
+      ],
+    ),
+  );
 }
 
 class DummyDataFactory {

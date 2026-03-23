@@ -125,6 +125,7 @@ class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
                     ),
                   );
                 },
+                itemBuilder: buildDummyThumbnail,
               ),
             ),
           ],

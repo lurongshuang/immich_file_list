@@ -27,6 +27,7 @@ class PhotoGridGallery extends StatefulWidget {
   final double? scrubberThumbEndOffset;
   final double? scrubberSnapThreshold;
   final bool alwaysShowScrubber;
+  final PhotoGridItemBuilder itemBuilder;
 
   const PhotoGridGallery({
     super.key,
@@ -52,6 +53,7 @@ class PhotoGridGallery extends StatefulWidget {
     this.scrubberThumbEndOffset,
     this.scrubberSnapThreshold,
     this.alwaysShowScrubber = false,
+    required this.itemBuilder,
   });
 
   @override
@@ -149,6 +151,7 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
           onLayoutInfoChanged: _onLayoutInfoChanged, // Added this callback
           onTap: widget.onTap,
           topSliver: widget.topSliver,
+          itemBuilder: widget.itemBuilder,
         );
 
         // 包装拖拽选择区域

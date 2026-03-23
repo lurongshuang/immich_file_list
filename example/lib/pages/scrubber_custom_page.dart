@@ -86,6 +86,7 @@ class _ScrubberCustomExampleState extends State<ScrubberCustomExample> {
                 scrubberLabelEndOffset: _getLabelEndOffset(),
                 scrubberThumbEndOffset: _getThumbEndOffset(),
                 scrubberMinSegmentSpacing: _getMinSegmentSpacing(),
+                itemBuilder: buildDummyThumbnail,
               ),
             ),
           ],

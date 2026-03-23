@@ -8,14 +8,20 @@ import '../core/photo_grid_sliver_segmented_list.dart';
 import '../logic/photo_drag_region.dart';
 import '../logic/photo_selection_controller.dart';
 
+/// 构建网格照片项的函数：将数据模型转换为渲染所需的 Widget。
+typedef PhotoGridItemBuilder = Widget Function(BuildContext context, PhotoGridItem item);
+
 /// 核心组合组件：提供高性能照片时间轴网格展示功能。
 /// 
 /// 内部集成 `CustomScrollView` 搭配 `SliverSegmentedList` 实现了照片按日期分组，
 /// 并且在滚动时可以通过 `PhotoGridScrubber` 提供悬浮的侧边日期滑块导航。
 /// 同时集成了 `PhotoDragRegion` 实现丝滑的跨屏幕拖拽选择体验。
 class PhotoGridView extends StatefulWidget {
-  /// 待渲染的所有时间轴元素集合。这群元素必须实现 [PhotoGridItem] 接口。
+  /// 待渲染的所有时间轴元素集合。
   final List<PhotoGridItem> items;
+  
+  /// 照片项构建器：业务层通过此函数定义照片（缩略图）的展示样式。
+  final PhotoGridItemBuilder itemBuilder;
   
   /// 每行展示的缩略图数量（默认 4）
   final int assetsPerRow;
@@ -68,6 +74,7 @@ class PhotoGridView extends StatefulWidget {
     this.onTap,
     this.topSliver,
     this.onLayoutInfoChanged,
+    required this.itemBuilder,
   });
 
   @override
@@ -279,6 +286,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
       assetsPerRow: columnCount,
       selectionController: widget.selectionController,
       onTap: widget.onTap,
+      itemBuilder: widget.itemBuilder,
     );
   }
 
@@ -408,6 +416,7 @@ class _AssetRow extends StatelessWidget {
   final int assetsPerRow;
   final PhotoSelectionController? selectionController;
   final void Function(PhotoGridItem)? onTap;
+  final PhotoGridItemBuilder itemBuilder;
 
   const _AssetRow({
     required this.items,
@@ -418,6 +427,7 @@ class _AssetRow extends StatelessWidget {
     required this.assetsPerRow,
     this.selectionController,
     this.onTap,
+    required this.itemBuilder,
   });
 
   @override
@@ -468,7 +478,7 @@ class _AssetRow extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          item.buildThumbnail(context),
+          itemBuilder(context, item),
           // 选中遮罩
           if (selectionActive || isSelected)
             Container(

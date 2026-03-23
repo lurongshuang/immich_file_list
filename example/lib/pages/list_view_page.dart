@@ -28,6 +28,7 @@ class ListViewExample extends StatelessWidget {
           showScrubber: true,
           selectionController: controller,
           onTap: (item) => handleTap(context, item, controller),
+          itemBuilder: buildDummyThumbnail,
           // 这里动态利用控制器来重塑顶层头部
           topSliver: SliverAppBar(
             title: Text(isSelecting && selectedCount > 0 ? '已选择 $selectedCount 项' : '复合 SliverAppBar 测试'),
