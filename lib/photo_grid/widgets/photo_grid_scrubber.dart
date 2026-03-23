@@ -72,6 +72,10 @@ class PhotoGridScrubber extends StatefulWidget {
   final VoidCallback? onDragUpdate;
   /// 手势结束拖拽回调。
   final VoidCallback? onDragEnd;
+  /// 是否显示日期气泡提示。
+  final bool showPrompt;
+  /// 是否显示日期标尺。
+  final bool showRuler;
 
   const PhotoGridScrubber({
     super.key,
@@ -100,6 +104,8 @@ class PhotoGridScrubber extends StatefulWidget {
     this.onDragStart,
     this.onDragUpdate,
     this.onDragEnd,
+    this.showPrompt = true,
+    this.showRuler = true,
   });
 
   @override
@@ -423,7 +429,7 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
       child: Stack(
         children: [
           RepaintBoundary(child: widget.child),
-          if (_isDragging && widget.showSegments)
+          if (_isDragging && widget.showSegments && widget.showRuler)
             ..._segments.where((s) => s.showSegment).map((s) => PositionedDirectional(
                   key: ValueKey('seg_${s.date.millisecondsSinceEpoch}'),
                   top: widget.topPadding + s.startOffset,
@@ -466,7 +472,7 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (labelText != null)
+                        if (widget.showPrompt && labelText != null)
                           FadeTransition(
                             opacity: _labelAnimation,
                             child: widget.labelBuilder?.call(ctx, labelText, _isDragging) ??

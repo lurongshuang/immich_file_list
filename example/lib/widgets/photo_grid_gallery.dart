@@ -33,6 +33,8 @@ class PhotoGridGallery extends StatefulWidget {
   final VoidCallback? onScrubberDragStart;
   final VoidCallback? onScrubberDragUpdate;
   final VoidCallback? onScrubberDragEnd;
+  final bool showScrubberPrompt;
+  final bool showScrubberRuler;
   final PhotoGridItemBuilder itemBuilder;
 
   const PhotoGridGallery({
@@ -65,6 +67,8 @@ class PhotoGridGallery extends StatefulWidget {
     this.onScrubberDragStart,
     this.onScrubberDragUpdate,
     this.onScrubberDragEnd,
+    this.showScrubberPrompt = true,
+    this.showScrubberRuler = true,
     required this.itemBuilder,
   });
 
@@ -213,6 +217,8 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
             onDragStart: widget.onScrubberDragStart,
             onDragUpdate: widget.onScrubberDragUpdate,
             onDragEnd: widget.onScrubberDragEnd,
+            showPrompt: widget.showScrubberPrompt,
+            showRuler: widget.showScrubberRuler,
             child: grid,
           );
         }

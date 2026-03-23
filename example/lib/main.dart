@@ -11,6 +11,7 @@ import 'pages/desktop_adaptive_page.dart';
 import 'pages/desktop_macos_page.dart';
 import 'pages/scrubber_custom_page.dart';
 import 'pages/multi_sliver_example.dart';
+import 'pages/scrubber_toggle_page.dart';
 
 void main() {
   runApp(const PhotoGridExampleApp());
@@ -110,6 +111,12 @@ class ExampleHomePage extends StatelessWidget {
             title: const Text('10. 复合多 Sliver 视口吸顶 (新)'),
             subtitle: const Text('演示多个顶部 Sliver 独立工作：AppBar 吸顶而 FilterBar 随动。同时包含滑块交互回调演示。'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MultiSliverExample())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.toggle_on),
+            title: const Text('11. 滑块 UI 开关测试 (新功能)'),
+            subtitle: const Text('演示 showPrompt (日期气泡) 与 showRuler (背景刻度) 的按需显隐逻辑。'),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScrubberToggleExample())),
           ),
         ],
       ),
