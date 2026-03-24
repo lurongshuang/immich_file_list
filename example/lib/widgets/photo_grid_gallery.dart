@@ -38,6 +38,8 @@ class PhotoGridGallery extends StatefulWidget {
   final bool showScrubberPrompt;
   final bool showScrubberRuler;
   final PhotoGridItemBuilder itemBuilder;
+  final PhotoGridHeaderBuilder? headerBuilder;
+  final SelectionBoxPainterBuilder? selectionBoxPainterBuilder;
 
   const PhotoGridGallery({
     super.key,
@@ -74,6 +76,8 @@ class PhotoGridGallery extends StatefulWidget {
     this.showScrubberPrompt = true,
     this.showScrubberRuler = true,
     required this.itemBuilder,
+    this.headerBuilder,
+    this.selectionBoxPainterBuilder,
   });
 
   /// 宫格模式：指定每行个数 [crossAxisCount] 和项宽高比 [childAspectRatio]。
@@ -91,6 +95,7 @@ class PhotoGridGallery extends StatefulWidget {
     void Function(PhotoGridItem)? onTap,
     List<Widget>? topSlivers,
     required PhotoGridItemBuilder itemBuilder,
+    PhotoGridHeaderBuilder? headerBuilder,
     // Scrubber 配置
     ScrubberLabelBuilder? scrubberLabelBuilder,
     ScrubberThumbBuilder? scrubberThumbBuilder,
@@ -113,7 +118,9 @@ class PhotoGridGallery extends StatefulWidget {
     VoidCallback? onScrubberDragEnd,
     bool showScrubberPrompt = true,
     bool showScrubberRuler = true,
-  }) => PhotoGridGallery(
+    SelectionBoxPainterBuilder? selectionBoxPainterBuilder,
+  }) {
+    return PhotoGridGallery(
     key: key,
     items: items,
     crossAxisCount: crossAxisCount,
@@ -127,6 +134,7 @@ class PhotoGridGallery extends StatefulWidget {
     onTap: onTap,
     topSlivers: topSlivers,
     itemBuilder: itemBuilder,
+    headerBuilder: headerBuilder,
     scrubberLabelBuilder: scrubberLabelBuilder,
     scrubberThumbBuilder: scrubberThumbBuilder,
     scrubberSegmentBuilder: scrubberSegmentBuilder,
@@ -148,7 +156,9 @@ class PhotoGridGallery extends StatefulWidget {
     onScrubberDragEnd: onScrubberDragEnd,
     showScrubberPrompt: showScrubberPrompt,
     showScrubberRuler: showScrubberRuler,
+    selectionBoxPainterBuilder: selectionBoxPainterBuilder,
   );
+  }
 
   /// 列表模式：强制一行一个，并指定固定的项高度 [itemHeight]。
   factory PhotoGridGallery.list({
@@ -163,6 +173,7 @@ class PhotoGridGallery extends StatefulWidget {
     void Function(PhotoGridItem)? onTap,
     List<Widget>? topSlivers,
     required PhotoGridItemBuilder itemBuilder,
+    PhotoGridHeaderBuilder? headerBuilder,
     // Scrubber 配置
     ScrubberLabelBuilder? scrubberLabelBuilder,
     ScrubberThumbBuilder? scrubberThumbBuilder,
@@ -185,7 +196,9 @@ class PhotoGridGallery extends StatefulWidget {
     VoidCallback? onScrubberDragEnd,
     bool showScrubberPrompt = true,
     bool showScrubberRuler = true,
-  }) => PhotoGridGallery(
+    SelectionBoxPainterBuilder? selectionBoxPainterBuilder,
+  }) {
+    return PhotoGridGallery(
     key: key,
     items: items,
     crossAxisCount: 1,
@@ -199,6 +212,7 @@ class PhotoGridGallery extends StatefulWidget {
     onTap: onTap,
     topSlivers: topSlivers,
     itemBuilder: itemBuilder,
+    headerBuilder: headerBuilder,
     scrubberLabelBuilder: scrubberLabelBuilder,
     scrubberThumbBuilder: scrubberThumbBuilder,
     scrubberSegmentBuilder: scrubberSegmentBuilder,
@@ -220,7 +234,9 @@ class PhotoGridGallery extends StatefulWidget {
     onScrubberDragEnd: onScrubberDragEnd,
     showScrubberPrompt: showScrubberPrompt,
     showScrubberRuler: showScrubberRuler,
+    selectionBoxPainterBuilder: selectionBoxPainterBuilder,
   );
+  }
 
   @override
   State<PhotoGridGallery> createState() => _PhotoGridGalleryState();
@@ -320,6 +336,7 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
           onTap: widget.onTap,
           topSlivers: widget.topSlivers,
           itemBuilder: widget.itemBuilder,
+          headerBuilder: widget.headerBuilder,
         );
 
         // 包装拖拽选择区域
@@ -339,6 +356,7 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
             crossAxisCount: widget.crossAxisCount,
             scrollController: _scrollController,
             itemLayoutMap: _itemLayoutMap,
+            selectionBoxPainterBuilder: widget.selectionBoxPainterBuilder,
             child: grid,
           );
         }

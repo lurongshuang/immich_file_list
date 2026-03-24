@@ -13,6 +13,7 @@ import 'pages/scrubber_custom_page.dart';
 import 'pages/multi_sliver_example.dart';
 import 'pages/scrubber_toggle_page.dart';
 import 'pages/fixed_extent_list_page.dart';
+import 'pages/ui_customization_page.dart';
 
 void main() {
   runApp(const PhotoGridExampleApp());
@@ -125,6 +126,13 @@ class ExampleHomePage extends StatelessWidget {
             title: const Text('12. 固定高度列表测试 (新)'),
             subtitle: const Text('演示一行一个 (assetsPerRow: 1) 的列表模式，配合 itemExtent 定义精确高度，完全规避比例拉伸。'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FixedExtentExample())),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.palette),
+            title: const Text('13. UI 定制化案例 (新)'),
+            subtitle: const Text('演示如何通过 itemBuilder 与 headerBuilder 实现完全个性化的视觉风格。'),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UICustomizationExample())),
           ),
         ],
       ),

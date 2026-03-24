@@ -21,37 +21,82 @@ class DummyPhotoItem implements PhotoGridItem {
 }
 
 /// 示例 UI 构建器：将 DummyPhotoItem 渲染为网格项。
-Widget buildDummyThumbnail(BuildContext context, PhotoGridItem item) {
+Widget buildDummyThumbnail(
+  BuildContext context,
+  PhotoGridItem item,
+  bool isSelected,
+  bool isFocused,
+  bool selectionActive,
+) {
   if (item is! DummyPhotoItem) return const SizedBox();
-  
-  return Container(
-    color: item.color,
-    child: Stack(
-      fit: StackFit.expand,
-      children: [
-        Center(
-          child: Text(
-            item.id,
-            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-          ),
+
+  return Stack(
+    fit: StackFit.expand,
+    children: [
+      Container(
+        color: item.color,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Center(
+              child: Text(
+                item.id,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+            if (item.title.isNotEmpty)
+              Positioned(
+                bottom: 4,
+                left: 4,
+                child: Text(
+                  item.title,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      backgroundColor: Colors.black45),
+                ),
+              ),
+            if (item.isVideo)
+              const Positioned(
+                top: 4,
+                right: 4,
+                child:
+                    Icon(Icons.play_circle_outline, color: Colors.white, size: 16),
+              ),
+          ],
         ),
-        if (item.title.isNotEmpty)
-          Positioned(
-            bottom: 4,
-            left: 4,
-            child: Text(
-              item.title,
-              style: const TextStyle(color: Colors.white, fontSize: 10, backgroundColor: Colors.black45),
+      ),
+      // 业务层定义的选中遮罩
+      if (selectionActive || isSelected)
+        Container(
+          color: isSelected
+              ? (Theme.of(context).primaryColor.withAlpha(50))
+              : Colors.transparent,
+          alignment: Alignment.topLeft,
+          padding: const EdgeInsets.all(4.0),
+          child: selectionActive
+              ? Icon(
+                  isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: isSelected
+                      ? Theme.of(context).primaryColor
+                      : Colors.white70,
+                )
+              : null,
+        ),
+      // 业务层定义的焦点环 (macOS 风格)
+      if (isFocused)
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Theme.of(context).primaryColor,
+              width: 3.0,
             ),
           ),
-        if (item.isVideo)
-          const Positioned(
-            top: 4,
-            right: 4,
-            child: Icon(Icons.play_circle_outline, color: Colors.white, size: 16),
-          ),
-      ],
-    ),
+        ),
+    ],
   );
 }
 

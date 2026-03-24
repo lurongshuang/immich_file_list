@@ -9,7 +9,13 @@ import '../logic/photo_drag_region.dart';
 import '../logic/photo_selection_controller.dart';
 
 /// 构建网格照片项的函数：将数据模型转换为渲染所需的 Widget。
-typedef PhotoGridItemBuilder = Widget Function(BuildContext context, PhotoGridItem item);
+typedef PhotoGridItemBuilder = Widget Function(
+  BuildContext context,
+  PhotoGridItem item,
+  bool isSelected,
+  bool isFocused,
+  bool selectionActive,
+);
 typedef PhotoGridHeaderBuilder = Widget Function(
   BuildContext context,
   Bucket bucket,
@@ -29,17 +35,17 @@ typedef PhotoGridRowBuilder = Widget Function(
 );
 
 /// 核心组合组件：提供高性能照片时间轴网格展示功能。
-/// 
+///
 /// 内部集成 `CustomScrollView` 搭配 `SliverSegmentedList` 实现了照片按日期分组，
 /// 并且在滚动时可以通过 `PhotoGridScrubber` 提供悬浮的侧边日期滑块导航。
 /// 同时集成了 `PhotoDragRegion` 实现丝滑的跨屏幕拖拽选择体验。
 class PhotoGridView extends StatefulWidget {
   /// 待渲染的所有时间轴元素集合。
   final List<PhotoGridItem> items;
-  
+
   /// 照片项构建器：业务层通过此函数定义照片（缩略图）的展示样式。
   final PhotoGridItemBuilder itemBuilder;
-  
+
   /// 每行展示的缩略图数量（默认 4）
   final int crossAxisCount;
 
@@ -62,6 +68,9 @@ class PhotoGridView extends StatefulWidget {
 
   /// 当内部段落数据重新生成后的回调。通常给 Scrubber 用于同步进度。
   final void Function(List<Segment> segments)? onSegmentsChanged;
+
+  /// 自定义头部构建器。若不提供则使用内置默认样式。
+  final PhotoGridHeaderBuilder? headerBuilder;
 
   /// 下拉刷新回调
   final Future<void> Function()? onRefresh;
@@ -92,6 +101,7 @@ class PhotoGridView extends StatefulWidget {
     this.onTap,
     this.topSlivers,
     this.onLayoutInfoChanged,
+    this.headerBuilder,
     required this.itemBuilder,
   });
 
@@ -112,6 +122,7 @@ class PhotoGridView extends StatefulWidget {
     void Function(PhotoGridItem)? onTap,
     List<Widget>? topSlivers,
     void Function(Map<String, Rect>)? onLayoutInfoChanged,
+    PhotoGridHeaderBuilder? headerBuilder,
     required PhotoGridItemBuilder itemBuilder,
   }) => PhotoGridView(
     key: key,
@@ -129,6 +140,7 @@ class PhotoGridView extends StatefulWidget {
     onTap: onTap,
     topSlivers: topSlivers,
     onLayoutInfoChanged: onLayoutInfoChanged,
+    headerBuilder: headerBuilder,
     itemBuilder: itemBuilder,
   );
 
@@ -147,6 +159,7 @@ class PhotoGridView extends StatefulWidget {
     void Function(PhotoGridItem)? onTap,
     List<Widget>? topSlivers,
     void Function(Map<String, Rect>)? onLayoutInfoChanged,
+    PhotoGridHeaderBuilder? headerBuilder,
     required PhotoGridItemBuilder itemBuilder,
   }) => PhotoGridView(
     key: key,
@@ -164,6 +177,7 @@ class PhotoGridView extends StatefulWidget {
     onTap: onTap,
     topSlivers: topSlivers,
     onLayoutInfoChanged: onLayoutInfoChanged,
+    headerBuilder: headerBuilder,
     itemBuilder: itemBuilder,
   );
 
@@ -273,6 +287,10 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     double height,
     int assetOffset,
   ) {
+    if (widget.headerBuilder != null) {
+      return widget.headerBuilder!(context, bucket, type, height, assetOffset);
+    }
+
     if (bucket is TimeBucket) {
       if (assetOffset < 0 || assetOffset >= widget.items.length) {
         return SizedBox(height: height);
@@ -393,8 +411,8 @@ class _PhotoGridViewState extends State<PhotoGridView> {
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
 
-        if (_cachedSegments != null && 
-            _lastMaxWidth == screenWidth && 
+        if (_cachedSegments != null &&
+            _lastMaxWidth == screenWidth &&
             _lastCrossAxisCount == widget.crossAxisCount &&
             _lastMainAxisSpacing == widget.mainAxisSpacing &&
             _lastCrossAxisSpacing == widget.crossAxisSpacing &&
@@ -406,7 +424,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
           final double mainAxisSpacing = widget.mainAxisSpacing;
           final double crossAxisSpacing = widget.crossAxisSpacing;
           final int crossAxisCount = widget.crossAxisCount;
-          
+
           final double tileWidth = (screenWidth - (crossAxisCount - 1) * crossAxisSpacing) / crossAxisCount;
           final double tileHeight = widget.mainAxisExtent ?? (tileWidth / widget.childAspectRatio);
 
@@ -427,7 +445,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
           );
 
           final List<Segment> generatedSegments = builder.generate();
-          
+
           // 计算全量项的布局坐标用于桌面端圈选持久化
           final Map<String, Rect> layoutMap = {};
           for (final segment in generatedSegments) {
@@ -435,12 +453,12 @@ class _PhotoGridViewState extends State<PhotoGridView> {
                final assetCount = segment.bucket.assetCount;
                final rows = (assetCount / segment.columnCount).ceil();
                final startAssetIndex = segment.firstAssetIndex;
-               
+
                for (int r = 0; r < rows; r++) {
                  final rowY = segment.gridOffset + (r * (segment.tileHeight + segment.mainAxisSpacing));
                  final rowStartAsset = startAssetIndex + (r * segment.columnCount);
                  final rowCount = min(segment.columnCount, assetCount - (r * segment.columnCount));
-                 
+
                  for (int c = 0; c < rowCount; c++) {
                    final assetIndex = rowStartAsset + c;
                    if (assetIndex < widget.items.length) {
@@ -461,7 +479,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
           _lastCrossAxisSpacing = widget.crossAxisSpacing;
           _lastAspectRatio = widget.childAspectRatio;
           _lastMainAxisExtent = widget.mainAxisExtent;
-          
+
           if (widget.onSegmentsChanged != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
                widget.onSegmentsChanged?.call(_segments);
@@ -644,7 +662,7 @@ class _AssetRow extends StatelessWidget {
     );
   }
 
-  /// 构建具体的单项内容（缩略图、选中遮罩、焦点环等）。
+  /// 构建具体的单项内容
   Widget _buildItemContent(BuildContext context, PhotoGridItem item, int absoluteOffset) {
     final bool selectionActive = selectionController?.isSelectionActive ?? false;
     final bool isSelected = selectionController?.selectedIds.contains(item.id) ?? false;
@@ -658,34 +676,12 @@ class _AssetRow extends StatelessWidget {
           onTap?.call(item);
         }
       },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          itemBuilder(context, item),
-          // 选中遮罩
-          if (selectionActive || isSelected)
-            Container(
-              color: isSelected
-                  ? (Theme.of(context).primaryColor.withAlpha(50))
-                  : Colors.transparent,
-              alignment: Alignment.topLeft,
-              padding: const EdgeInsets.all(4.0),
-              child: selectionActive ? Icon(
-                isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: isSelected ? Theme.of(context).primaryColor : Colors.white70,
-              ) : null,
-            ),
-          // 焦点环 (macOS 风格)
-          if (isFocused)
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Theme.of(context).primaryColor,
-                  width: 3.0,
-                ),
-              ),
-            ),
-        ],
+      child: itemBuilder(
+        context,
+        item,
+        isSelected,
+        isFocused,
+        selectionActive,
       ),
     );
   }

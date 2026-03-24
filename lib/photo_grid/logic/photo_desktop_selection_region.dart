@@ -7,6 +7,9 @@ import 'package:flutter/services.dart';
 import 'photo_selection_controller.dart';
 import 'photo_drag_region.dart';
 
+/// 构建桌面端拖拽选框 (Marquee Selection) 的 Painter 构建器。
+typedef SelectionBoxPainterBuilder = CustomPainter Function(Rect rect, Color primaryColor);
+
 /// 桌面端专属的多选与导航容器。
 /// 
 /// 提供类似 macOS Finder 的交互体验：
@@ -21,6 +24,7 @@ class PhotoDesktopSelectionRegion extends StatefulWidget {
   final int crossAxisCount;
   final ScrollController? scrollController;
   final Map<String, Rect>? itemLayoutMap;
+  final SelectionBoxPainterBuilder? selectionBoxPainterBuilder;
 
   const PhotoDesktopSelectionRegion({
     super.key,
@@ -30,6 +34,7 @@ class PhotoDesktopSelectionRegion extends StatefulWidget {
     this.crossAxisCount = 4,
     this.scrollController,
     this.itemLayoutMap,
+    this.selectionBoxPainterBuilder,
   });
 
   @override
@@ -398,7 +403,8 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
             if (_isSelecting && visualRect != null)
               IgnorePointer(
                 child: CustomPaint(
-                  painter: _SelectionPainter(visualRect, Theme.of(context).primaryColor),
+                  painter: widget.selectionBoxPainterBuilder?.call(visualRect, Theme.of(context).primaryColor) ??
+                      _SelectionPainter(visualRect, Theme.of(context).primaryColor),
                   size: Size.infinite,
                 ),
               ),

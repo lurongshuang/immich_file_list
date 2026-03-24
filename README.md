@@ -28,15 +28,15 @@
 | 属性 | 类型 | 描述 |
 | :--- | :--- | :--- |
 | `items` | `List<PhotoGridItem>` | **必填**。照片数据源。 |
-| `itemBuilder` | `PhotoGridItemBuilder` | **必填**。定义单项展现方式：`(context, item) => Widget`。 |
-| `assetsPerRow` | `int` | 每行显示的列数（默认 4）。 |
+| `itemBuilder` | `PhotoGridItemBuilder` | **必填**。单项展现：`(context, item, isSelected, isFocused, selectionActive) => Widget`。 |
+| `headerBuilder` | `PhotoGridHeaderBuilder?` | 可选。自定义分组头部渲染方式。 |
+| `crossAxisCount` | `int` | 每行显示的列数（默认 4）。 |
+| `mainAxisSpacing` | `double` | 主轴（垂直）间距（默认 4.0）。 |
+| `crossAxisSpacing` | `double` | 横轴（水平）间距（默认 4.0）。 |
 | `groupBy` | `GroupPhotoBy` | 分组策略：`year`, `month`, `day`, `none`。 |
-| `margin` | `double` | 物件间距（默认 4.0）。 |
-| `childAspectRatio` | `double` | 宽高比（默认 1.0）。 |
 | `selectionController` | `PhotoSelectionController?` | 绑定多选状态控制器。 |
-| `onSegmentsChanged` | `Function(List<Segment>)?` | 当段落数据刷新时触发（常用于同步 Scrubber）。 |
 | `onTap` | `Function(PhotoGridItem)?` | 点击项的回调。 |
-| `topSliver` | `Widget?` | 在列表顶部插入自定义 Sliver 组件。 |
+| `topSlivers` | `List<Widget>?` | 在列表顶部插入自定义 Sliver 组件列表。 |
 
 ### 2. PhotoGridScrubber
 悬浮在右侧的时间轴快速定位工具。
@@ -72,6 +72,7 @@
 | `assetsPerRow` | `int` | 每行显示的项数（默认 4），用于键盘上下移动计算。 |
 | `scrollController` | `ScrollController?` | 滚动控制器，用于框选时的自动滚动同步。 |
 | `itemLayoutMap` | `Map<String, Rect>?` | 每个项相对于内容的几何坐标映射（由 PhotoGridView 实时产出）。 |
+| `selectionBoxPainterBuilder` | `SelectionBoxPainterBuilder?` | 自定义桌面端拖拽选框 (Marquee) 的 Painter 构建器。 |
 
 ---
 
@@ -118,9 +119,15 @@ class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
                 controller: _scrollController,
                 selectionController: _selectionController,
                 onSegmentsChanged: (s) => setState(() => _segments = s),
-                itemBuilder: (context, item) => Container(
-                   color: Colors.grey[300],
-                   child: Center(child: Text(item.id)),
+                itemBuilder: (context, item, isSelected, isFocused, selectionActive) => Container(
+                   color: isSelected ? Colors.blue.withAlpha(50) : Colors.grey[300],
+                   child: Stack(
+                     children: [
+                       Center(child: Text(item.id)),
+                       if (isFocused)
+                         Container(decoration: BoxDecoration(border: Border.all(color: Colors.blue, width: 2))),
+                     ],
+                   ),
                 ),
               ),
             );
