@@ -58,6 +58,11 @@ class PhotoGridView extends StatefulWidget {
   /// 列表项时间轴的分组维度规则（[GroupPhotoBy.day], [GroupPhotoBy.month], [GroupPhotoBy.none]等）
   final GroupPhotoBy groupBy;
 
+  /// 是否启用日期分组。默认为 true。
+  /// - true: 按 [groupBy] 规则分组显示，每组带有 Header
+  /// - false: 不分组，整个列表作为单一网格/列表展示，不显示 Header
+  final bool enableGrouping;
+
   /// 接管控制选中状态的全局控制器。
   /// 若传入此控制器，则开启相册的联动选择能力（单选与框选）。如果没有多选需求可以为 null。
   final PhotoSelectionController? selectionController;
@@ -85,6 +90,11 @@ class PhotoGridView extends StatefulWidget {
   /// 通常用于外部组件需要知道内部项的精确位置信息时。
   final void Function(Map<String, Rect>)? onLayoutInfoChanged;
 
+  /// 自定义 Header 高度的回调函数。
+  /// 参数是 [HeaderType]，返回值为 header 的高度。
+  /// 如果不提供，则使用内置的默认高度计算逻辑（按 HeaderType 硬编码）。
+  final double Function(HeaderType)? headerExtentCalculator;
+
   const PhotoGridView({
     super.key,
     required this.items,
@@ -94,6 +104,7 @@ class PhotoGridView extends StatefulWidget {
     this.childAspectRatio = 1.0,
     this.mainAxisExtent,
     this.groupBy = GroupPhotoBy.month,
+    this.enableGrouping = true,
     this.selectionController,
     this.controller,
     this.onSegmentsChanged,
@@ -102,6 +113,7 @@ class PhotoGridView extends StatefulWidget {
     this.topSlivers,
     this.onLayoutInfoChanged,
     this.headerBuilder,
+    this.headerExtentCalculator,
     required this.itemBuilder,
   });
 
@@ -123,6 +135,8 @@ class PhotoGridView extends StatefulWidget {
     List<Widget>? topSlivers,
     void Function(Map<String, Rect>)? onLayoutInfoChanged,
     PhotoGridHeaderBuilder? headerBuilder,
+    double Function(HeaderType)? headerExtentCalculator,
+    bool enableGrouping = true,
     required PhotoGridItemBuilder itemBuilder,
   }) => PhotoGridView(
     key: key,
@@ -133,6 +147,7 @@ class PhotoGridView extends StatefulWidget {
     childAspectRatio: childAspectRatio,
     mainAxisExtent: mainAxisExtent,
     groupBy: groupBy,
+    enableGrouping: enableGrouping,
     selectionController: selectionController,
     controller: controller,
     onSegmentsChanged: onSegmentsChanged,
@@ -141,6 +156,7 @@ class PhotoGridView extends StatefulWidget {
     topSlivers: topSlivers,
     onLayoutInfoChanged: onLayoutInfoChanged,
     headerBuilder: headerBuilder,
+    headerExtentCalculator: headerExtentCalculator,
     itemBuilder: itemBuilder,
   );
 
@@ -160,6 +176,8 @@ class PhotoGridView extends StatefulWidget {
     List<Widget>? topSlivers,
     void Function(Map<String, Rect>)? onLayoutInfoChanged,
     PhotoGridHeaderBuilder? headerBuilder,
+    double Function(HeaderType)? headerExtentCalculator,
+    bool enableGrouping = true,
     required PhotoGridItemBuilder itemBuilder,
   }) => PhotoGridView(
     key: key,
@@ -170,6 +188,7 @@ class PhotoGridView extends StatefulWidget {
     mainAxisExtent: itemHeight,
     childAspectRatio: 1.0,
     groupBy: groupBy,
+    enableGrouping: enableGrouping,
     selectionController: selectionController,
     controller: controller,
     onSegmentsChanged: onSegmentsChanged,
@@ -178,6 +197,7 @@ class PhotoGridView extends StatefulWidget {
     topSlivers: topSlivers,
     onLayoutInfoChanged: onLayoutInfoChanged,
     headerBuilder: headerBuilder,
+    headerExtentCalculator: headerExtentCalculator,
     itemBuilder: itemBuilder,
   );
 
@@ -198,6 +218,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
   double? _lastCrossAxisSpacing;
   double? _lastAspectRatio;
   double? _lastMainAxisExtent;
+  bool? _lastEnableGrouping;
   List<Segment>? _cachedSegments;
 
   @override
@@ -228,6 +249,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     }
     if (oldWidget.items != widget.items ||
         oldWidget.groupBy != widget.groupBy ||
+        oldWidget.enableGrouping != widget.enableGrouping ||
         oldWidget.crossAxisCount != widget.crossAxisCount ||
         oldWidget.mainAxisSpacing != widget.mainAxisSpacing ||
         oldWidget.crossAxisSpacing != widget.crossAxisSpacing ||
@@ -240,8 +262,14 @@ class _PhotoGridViewState extends State<PhotoGridView> {
   void _rebuildRenderList() {
     _cachedSegments = null;
     _lastMaxWidth = null;
+    _lastEnableGrouping = null;
     _buckets.clear();
     if (widget.items.isEmpty) return;
+
+    if (!widget.enableGrouping) {
+      _buckets.add(TimeBucket(date: widget.items.first.date, assetCount: widget.items.length));
+      return;
+    }
 
     int count = 0;
     DateTime? currentDate;
@@ -418,6 +446,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
             _lastCrossAxisSpacing == widget.crossAxisSpacing &&
             _lastAspectRatio == widget.childAspectRatio &&
             _lastMainAxisExtent == widget.mainAxisExtent &&
+            _lastEnableGrouping == widget.enableGrouping &&
             _buckets.isNotEmpty) {
            _segments = _cachedSegments!;
         } else {
@@ -435,13 +464,16 @@ class _PhotoGridViewState extends State<PhotoGridView> {
             columnCount: crossAxisCount,
             mainAxisSpacing: mainAxisSpacing,
             crossAxisSpacing: crossAxisSpacing,
-            groupBy: widget.groupBy == GroupPhotoBy.day
+            groupBy: !widget.enableGrouping
+                ? GroupAssetsBy.none
+                : widget.groupBy == GroupPhotoBy.day
                 ? GroupAssetsBy.day
                 : widget.groupBy == GroupPhotoBy.month
                 ? GroupAssetsBy.month
                 : widget.groupBy == GroupPhotoBy.year
                 ? GroupAssetsBy.year
                 : GroupAssetsBy.auto,
+            headerExtentCalculator: widget.headerExtentCalculator,
           );
 
           final List<Segment> generatedSegments = builder.generate();
@@ -479,6 +511,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
           _lastCrossAxisSpacing = widget.crossAxisSpacing;
           _lastAspectRatio = widget.childAspectRatio;
           _lastMainAxisExtent = widget.mainAxisExtent;
+          _lastEnableGrouping = widget.enableGrouping;
 
           if (widget.onSegmentsChanged != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {

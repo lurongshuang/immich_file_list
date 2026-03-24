@@ -125,6 +125,7 @@ class FixedSegmentBuilder {
   final double mainAxisSpacing;
   final double crossAxisSpacing;
   final GroupAssetsBy groupBy;
+  final double Function(HeaderType)? headerExtentCalculator;
 
   const FixedSegmentBuilder({
     required this.buckets,
@@ -134,6 +135,7 @@ class FixedSegmentBuilder {
     this.mainAxisSpacing = 2.0,
     this.crossAxisSpacing = 2.0,
     this.groupBy = GroupAssetsBy.day,
+    this.headerExtentCalculator,
   });
 
   static double headerExtent(HeaderType header) {
@@ -150,6 +152,13 @@ class FixedSegmentBuilder {
       case HeaderType.none:
         return 0.0;
     }
+  }
+
+  double _calculateHeaderExtent(HeaderType header) {
+    if (headerExtentCalculator != null) {
+      return headerExtentCalculator!(header);
+    }
+    return headerExtent(header);
   }
 
   /// 执行段落预计算生成。
@@ -190,7 +199,7 @@ class FixedSegmentBuilder {
           break;
       }
       
-      final currentHeaderExtent = headerExtent(timelineHeader);
+      final currentHeaderExtent = _calculateHeaderExtent(timelineHeader);
       final segmentStartOffset = startOffset;
       startOffset += currentHeaderExtent + (tileHeight * numberOfRows) + mainAxisSpacing * (numberOfRows - 1);
       final segmentEndOffset = startOffset;

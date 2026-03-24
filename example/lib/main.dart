@@ -14,6 +14,8 @@ import 'pages/multi_sliver_example.dart';
 import 'pages/scrubber_toggle_page.dart';
 import 'pages/fixed_extent_list_page.dart';
 import 'pages/ui_customization_page.dart';
+import 'pages/no_grouping_page.dart';
+import 'pages/header_height_page.dart';
 
 void main() {
   runApp(const PhotoGridExampleApp());
@@ -133,6 +135,19 @@ class ExampleHomePage extends StatelessWidget {
             title: const Text('13. UI 定制化案例 (新)'),
             subtitle: const Text('演示如何通过 itemBuilder 与 headerBuilder 实现完全个性化的视觉风格。'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UICustomizationExample())),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.view_week),
+            title: const Text('14. 分组开关示例'),
+            subtitle: const Text('演示 enableGrouping 开关，可实时切换分组/不分组模式。'),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NoGroupingExample())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.straighten),
+            title: const Text('15. 自定义 Header 高度'),
+            subtitle: const Text('演示 headerExtentCalculator 如何自定义每个 Header 的高度。'),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HeaderHeightExample())),
           ),
         ],
       ),

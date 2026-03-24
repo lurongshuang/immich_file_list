@@ -1,6 +1,6 @@
 name: immich_file_list
 description: A high-performance, professional photo grid library for Flutter with 100,000+ items support, macOS-style desktop interactions, and 100% decoupled architecture.
-version: 1.0.8
+version: 1.0.9
 homepage: https://github.com/lurongshuang/immich_file_list
 
 environment:

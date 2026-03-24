@@ -40,6 +40,8 @@ class PhotoGridGallery extends StatefulWidget {
   final PhotoGridItemBuilder itemBuilder;
   final PhotoGridHeaderBuilder? headerBuilder;
   final SelectionBoxPainterBuilder? selectionBoxPainterBuilder;
+  final double Function(HeaderType)? headerExtentCalculator;
+  final bool enableGrouping;
 
   const PhotoGridGallery({
     super.key,
@@ -78,6 +80,8 @@ class PhotoGridGallery extends StatefulWidget {
     required this.itemBuilder,
     this.headerBuilder,
     this.selectionBoxPainterBuilder,
+    this.headerExtentCalculator,
+    this.enableGrouping = true,
   });
 
   /// 宫格模式：指定每行个数 [crossAxisCount] 和项宽高比 [childAspectRatio]。
@@ -119,6 +123,8 @@ class PhotoGridGallery extends StatefulWidget {
     bool showScrubberPrompt = true,
     bool showScrubberRuler = true,
     SelectionBoxPainterBuilder? selectionBoxPainterBuilder,
+    double Function(HeaderType)? headerExtentCalculator,
+    bool enableGrouping = true,
   }) {
     return PhotoGridGallery(
     key: key,
@@ -157,6 +163,8 @@ class PhotoGridGallery extends StatefulWidget {
     showScrubberPrompt: showScrubberPrompt,
     showScrubberRuler: showScrubberRuler,
     selectionBoxPainterBuilder: selectionBoxPainterBuilder,
+    headerExtentCalculator: headerExtentCalculator,
+    enableGrouping: enableGrouping,
   );
   }
 
@@ -197,6 +205,8 @@ class PhotoGridGallery extends StatefulWidget {
     bool showScrubberPrompt = true,
     bool showScrubberRuler = true,
     SelectionBoxPainterBuilder? selectionBoxPainterBuilder,
+    double Function(HeaderType)? headerExtentCalculator,
+    bool enableGrouping = true,
   }) {
     return PhotoGridGallery(
     key: key,
@@ -235,6 +245,8 @@ class PhotoGridGallery extends StatefulWidget {
     showScrubberPrompt: showScrubberPrompt,
     showScrubberRuler: showScrubberRuler,
     selectionBoxPainterBuilder: selectionBoxPainterBuilder,
+    headerExtentCalculator: headerExtentCalculator,
+    enableGrouping: enableGrouping,
   );
   }
 
@@ -337,6 +349,8 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
           topSlivers: widget.topSlivers,
           itemBuilder: widget.itemBuilder,
           headerBuilder: widget.headerBuilder,
+          headerExtentCalculator: widget.headerExtentCalculator,
+          enableGrouping: widget.enableGrouping,
         );
 
         // 包装拖拽选择区域
