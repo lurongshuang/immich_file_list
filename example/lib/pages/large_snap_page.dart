@@ -15,10 +15,11 @@ class LargeSnapExample extends StatelessWidget {
     return ExamplePageWrapper(
       title: '超大数据量磁吸测试 (48个月极限方案)',
       items: DummyDataFactory.generateDummyData(48, 30000),
-      builder: (context, items, controller) => PhotoGridGallery(
+      builder: (context, items, controller) => PhotoGridGallery.grid(
         items: items,
-        assetsPerRow: 5,               
-        margin: 1.0,
+        crossAxisCount: 5,               
+        mainAxisSpacing: 1.0,
+        crossAxisSpacing: 1.0,
         groupBy: GroupPhotoBy.month,
         showScrubber: true,
         selectionController: controller,

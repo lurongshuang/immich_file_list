@@ -12,6 +12,7 @@ import 'pages/desktop_macos_page.dart';
 import 'pages/scrubber_custom_page.dart';
 import 'pages/multi_sliver_example.dart';
 import 'pages/scrubber_toggle_page.dart';
+import 'pages/fixed_extent_list_page.dart';
 
 void main() {
   runApp(const PhotoGridExampleApp());
@@ -117,6 +118,13 @@ class ExampleHomePage extends StatelessWidget {
             title: const Text('11. 滑块 UI 开关测试 (新功能)'),
             subtitle: const Text('演示 showPrompt (日期气泡) 与 showRuler (背景刻度) 的按需显隐逻辑。'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScrubberToggleExample())),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.reorder),
+            title: const Text('12. 固定高度列表测试 (新)'),
+            subtitle: const Text('演示一行一个 (assetsPerRow: 1) 的列表模式，配合 itemExtent 定义精确高度，完全规避比例拉伸。'),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FixedExtentExample())),
           ),
         ],
       ),

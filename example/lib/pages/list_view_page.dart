@@ -19,11 +19,11 @@ class ListViewExample extends StatelessWidget {
         final isSelecting = controller.isSelectionActive;
         final selectedCount = controller.selectedIds.length;
 
-        return PhotoGridGallery(
+        return PhotoGridGallery.list(
           items: items,
-          assetsPerRow: 1,               
-          childAspectRatio: 3.5,
-          margin: 8.0,
+          itemHeight: 90.0,
+          mainAxisSpacing: 8.0,
+          crossAxisSpacing: 8.0,
           groupBy: GroupPhotoBy.month,
           showScrubber: true,
           selectionController: controller,

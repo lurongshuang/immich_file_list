@@ -61,11 +61,12 @@ class _ScrubberCustomExampleState extends State<ScrubberCustomExample> {
             _buildControls(),
             
             Expanded(
-              child: PhotoGridGallery(
+              child: PhotoGridGallery.grid(
                 key: ValueKey("$_currentPreset-$_groupBy-$_alwaysShow"), // 切换时重建
                 items: items,
-                assetsPerRow: _groupBy == GroupPhotoBy.year ? 8 : 4, // 年度视图更密集
-                margin: 2.0,
+                crossAxisCount: _groupBy == GroupPhotoBy.year ? 8 : 4, // 年度视图更密集
+                mainAxisSpacing: 2.0,
+                crossAxisSpacing: 2.0,
                 childAspectRatio: 1.0,
                 groupBy: _groupBy,
                 showScrubber: true,

@@ -15,10 +15,11 @@ class BasicScrubberExample extends StatelessWidget {
     return ExamplePageWrapper(
       title: '基础平滑测试',
       items: DummyDataFactory.generateDummyData(5, 500),
-      builder: (context, items, controller) => PhotoGridGallery(
+      builder: (context, items, controller) => PhotoGridGallery.grid(
         items: items,
-        assetsPerRow: 4,
-        margin: 2.0,
+        crossAxisCount: 4,
+        mainAxisSpacing: 2.0,
+        crossAxisSpacing: 2.0,
         groupBy: GroupPhotoBy.month,
         showScrubber: true,
         selectionController: controller,

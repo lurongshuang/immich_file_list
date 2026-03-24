@@ -23,13 +23,14 @@ class DesktopAdaptiveExample extends StatelessWidget {
           debounceDuration: const Duration(milliseconds: 300),
           builder: (context, stableWidth) {
             // 这里才是真正的业务计算逻辑：外部决定怎么用这个宽度
-            final assetsPerRow = (stableWidth / 180).floor().clamp(2, 20);
+            final crossAxisCount = (stableWidth / 180).floor().clamp(2, 20);
 
-            return PhotoGridGallery(
+            return PhotoGridGallery.grid(
               key: ValueKey('grid_at_width_$stableWidth'), // 给个 key 确保重绘时状态干净
               items: items,
-              assetsPerRow: assetsPerRow,
-              margin: 4.0,
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: 4.0,
+              crossAxisSpacing: 4.0,
               groupBy: GroupPhotoBy.day,
               showScrubber: true,
               selectionController: controller,

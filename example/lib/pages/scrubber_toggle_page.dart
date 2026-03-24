@@ -48,8 +48,9 @@ class _ScrubberToggleExampleState extends State<ScrubberToggleExample> {
           ),
         ],
       ),
-      body: PhotoGridGallery(
+      body: PhotoGridGallery.grid(
         items: _items,
+        crossAxisCount: 4, // 默认补上
         showScrubber: true,
         showScrubberPrompt: _showPrompt,
         showScrubberRuler: _showRuler,

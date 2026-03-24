@@ -15,11 +15,12 @@ class NormalListExample extends StatelessWidget {
     return ExamplePageWrapper(
       title: '普通流水列表',
       items: DummyDataFactory.generateDummyData(1, 200, mixedTypes: true),
-      builder: (context, items, controller) => PhotoGridGallery(
+      builder: (context, items, controller) => PhotoGridGallery.grid(
         items: items,
-        assetsPerRow: 1,               
+        crossAxisCount: 1,               
         childAspectRatio: 2.5,
-        margin: 6.0,                   
+        mainAxisSpacing: 6.0,
+        crossAxisSpacing: 6.0,                   
         groupBy: GroupPhotoBy.none,     
         showScrubber: false,
         selectionController: controller,

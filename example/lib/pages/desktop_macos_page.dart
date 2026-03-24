@@ -14,8 +14,9 @@ class DesktopMacOSExample extends StatefulWidget {
 class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
   final List<DummyPhotoItem> _items = DummyDataFactory.generateDummyData(60, 5000);
   
-  double _assetsPerRow = 6;
-  double _margin = 4.0;
+  double _crossAxisCount = 6;
+  double _mainAxisSpacing = 4.0;
+  double _crossAxisSpacing = 4.0;
   double _aspectRatio = 1.0;
 
   @override
@@ -41,9 +42,11 @@ class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
               ),
               child: Row(
                 children: [
-                   _buildControl('列数: ${_assetsPerRow.toInt()}', (v) => setState(() => _assetsPerRow = v), 2, 12),
+                   _buildControl('列数: ${_crossAxisCount.toInt()}', (v) => setState(() => _crossAxisCount = v), 2, 12),
                    const VerticalDivider(),
-                   _buildControl('间距: ${_margin.toInt()}', (v) => setState(() => _margin = v), 0, 20),
+                   _buildControl('主间距: ${_mainAxisSpacing.toInt()}', (v) => setState(() => _mainAxisSpacing = v), 0, 20),
+                   const VerticalDivider(),
+                   _buildControl('横间距: ${_crossAxisSpacing.toInt()}', (v) => setState(() => _crossAxisSpacing = v), 0, 20),
                    const VerticalDivider(),
                    _buildControl('比例: ${_aspectRatio.toStringAsFixed(1)}', (v) => setState(() => _aspectRatio = v), 0.5, 2.0),
                 ],
@@ -66,10 +69,11 @@ class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
               ),
             ),
             Expanded(
-              child: PhotoGridGallery(
+              child: PhotoGridGallery.grid(
                 items: items,
-                assetsPerRow: _assetsPerRow.toInt(),
-                margin: _margin,
+                crossAxisCount: _crossAxisCount.toInt(),
+                mainAxisSpacing: _mainAxisSpacing,
+                crossAxisSpacing: _crossAxisSpacing,
                 childAspectRatio: _aspectRatio,
                 groupBy: GroupPhotoBy.month,
                 showScrubber: true,
@@ -136,8 +140,8 @@ class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
 
   Widget _buildControl(String label, ValueChanged<double> onChanged, double min, double max) {
     final double currentValue = label.contains('列') 
-        ? _assetsPerRow 
-        : (label.contains('间距') ? _margin : _aspectRatio);
+        ? _crossAxisCount 
+        : (label.contains('主间') ? _mainAxisSpacing : (label.contains('横间') ? _crossAxisSpacing : _aspectRatio));
 
     return Expanded(
       child: Column(

@@ -15,11 +15,12 @@ class CustomGridExample extends StatelessWidget {
     return ExamplePageWrapper(
       title: '宫格定制形态',
       items: DummyDataFactory.generateDummyData(2, 100, mixedTypes: true),
-      builder: (context, items, controller) => PhotoGridGallery(
+      builder: (context, items, controller) => PhotoGridGallery.grid(
         items: items,
-        assetsPerRow: 2,               
-        margin: 6.0,                   
-        groupBy: GroupPhotoBy.day,     
+        crossAxisCount: 2,
+        mainAxisSpacing: 6.0,
+        crossAxisSpacing: 6.0,
+        groupBy: GroupPhotoBy.day,
         showScrubber: true,
         selectionController: controller,
         onTap: (item) => handleTap(context, item, controller),

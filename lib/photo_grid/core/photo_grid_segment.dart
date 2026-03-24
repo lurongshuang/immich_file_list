@@ -32,7 +32,7 @@ abstract class Segment {
   final int lastIndex;
   final double startOffset;
   final double endOffset;
-  final double spacing;
+  final double mainAxisSpacing;
   final double headerExtent;
   final int firstAssetIndex;
   final Bucket bucket;
@@ -49,10 +49,10 @@ abstract class Segment {
     required this.firstAssetIndex,
     required this.bucket,
     required this.headerExtent,
-    required this.spacing,
+    required this.mainAxisSpacing,
     required this.header,
   })  : gridIndex = firstIndex + 1,
-        gridOffset = startOffset + headerExtent + spacing;
+        gridOffset = startOffset + headerExtent + mainAxisSpacing;
 
   bool containsIndex(int index) => firstIndex <= index && index <= lastIndex;
   bool isWithinOffset(double offset) => startOffset <= offset && offset <= endOffset;
@@ -74,6 +74,8 @@ extension SegmentListExtension on List<Segment> {
 
 class FixedSegment extends Segment {
   final double tileHeight;
+  final double tileWidth;
+  final double crossAxisSpacing;
   final int columnCount;
   final double mainAxisExtend;
 
@@ -85,12 +87,14 @@ class FixedSegment extends Segment {
     required super.firstAssetIndex,
     required super.bucket,
     required this.tileHeight,
+    required this.tileWidth,
+    required this.crossAxisSpacing,
     required this.columnCount,
     required super.headerExtent,
-    required super.spacing,
+    required super.mainAxisSpacing,
     required super.header,
   })  : assert(tileHeight != 0),
-        mainAxisExtend = tileHeight + spacing;
+        mainAxisExtend = tileHeight + mainAxisSpacing;
 
   @override
   double indexToLayoutOffset(int index) {
@@ -116,15 +120,19 @@ class FixedSegment extends Segment {
 class FixedSegmentBuilder {
   final List<Bucket> buckets;
   final double tileHeight;
+  final double tileWidth;
   final int columnCount;
-  final double spacing;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
   final GroupAssetsBy groupBy;
 
   const FixedSegmentBuilder({
     required this.buckets,
     required this.tileHeight,
+    required this.tileWidth,
     required this.columnCount,
-    this.spacing = 2.0,
+    this.mainAxisSpacing = 2.0,
+    this.crossAxisSpacing = 2.0,
     this.groupBy = GroupAssetsBy.day,
   });
 
@@ -184,7 +192,7 @@ class FixedSegmentBuilder {
       
       final currentHeaderExtent = headerExtent(timelineHeader);
       final segmentStartOffset = startOffset;
-      startOffset += currentHeaderExtent + (tileHeight * numberOfRows) + spacing * (numberOfRows - 1);
+      startOffset += currentHeaderExtent + (tileHeight * numberOfRows) + mainAxisSpacing * (numberOfRows - 1);
       final segmentEndOffset = startOffset;
 
       segments.add(
@@ -196,9 +204,11 @@ class FixedSegmentBuilder {
           firstAssetIndex: assetIndex,
           bucket: bucket,
           tileHeight: tileHeight,
+          tileWidth: tileWidth,
           columnCount: columnCount,
           headerExtent: currentHeaderExtent,
-          spacing: spacing,
+          mainAxisSpacing: mainAxisSpacing,
+          crossAxisSpacing: crossAxisSpacing,
           header: timelineHeader,
         ),
       );

@@ -17,10 +17,11 @@ class SelectionExample extends StatelessWidget {
       items: DummyDataFactory.generateDummyData(48, 10000),
       initialSelectionActive: true,
       builder: (context, items, controller) {
-        return PhotoGridGallery(
+        return PhotoGridGallery.grid(
           items: items,
-          assetsPerRow: 4,
-          margin: 2.0,
+          crossAxisCount: 4,
+          mainAxisSpacing: 2.0,
+          crossAxisSpacing: 2.0,
           groupBy: GroupPhotoBy.none,    
           showScrubber: false,         
           selectionController: controller,

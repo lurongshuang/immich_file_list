@@ -21,9 +21,11 @@ typedef PhotoGridRowBuilder = Widget Function(
   BuildContext context,
   int assetIndex,
   int assetCount,
+  double tileWidth,
   double tileHeight,
-  double spacing,
-  int columnCount,
+  double mainAxisSpacing,
+  double crossAxisSpacing,
+  int crossAxisCount,
 );
 
 /// 核心组合组件：提供高性能照片时间轴网格展示功能。
@@ -39,14 +41,13 @@ class PhotoGridView extends StatefulWidget {
   final PhotoGridItemBuilder itemBuilder;
   
   /// 每行展示的缩略图数量（默认 4）
-  final int assetsPerRow;
+  final int crossAxisCount;
 
   /// 项与项之间的间距大小（默认 3.0）
-  final double margin;
-
-  /// 单个缩略图的纵横比。
-  /// (1.0 = 正方形网格; 3.0 = 适合普通垂直列表的宽边长条)
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
   final double childAspectRatio;
+  final double? mainAxisExtent;
 
   /// 列表项时间轴的分组维度规则（[GroupPhotoBy.day], [GroupPhotoBy.month], [GroupPhotoBy.none]等）
   final GroupPhotoBy groupBy;
@@ -78,9 +79,11 @@ class PhotoGridView extends StatefulWidget {
   const PhotoGridView({
     super.key,
     required this.items,
-    this.assetsPerRow = 4,
-    this.margin = 4.0,
+    this.crossAxisCount = 4,
+    this.mainAxisSpacing = 4.0,
+    this.crossAxisSpacing = 4.0,
     this.childAspectRatio = 1.0,
+    this.mainAxisExtent,
     this.groupBy = GroupPhotoBy.month,
     this.selectionController,
     this.controller,
@@ -91,6 +94,78 @@ class PhotoGridView extends StatefulWidget {
     this.onLayoutInfoChanged,
     required this.itemBuilder,
   });
+
+  /// 宫格模式：指定每行个数 [crossAxisCount] 和项宽高比 [childAspectRatio]。
+  factory PhotoGridView.grid({
+    Key? key,
+    required List<PhotoGridItem> items,
+    required int crossAxisCount,
+    double mainAxisSpacing = 4.0,
+    double crossAxisSpacing = 4.0,
+    double childAspectRatio = 1.0,
+    double? mainAxisExtent,
+    GroupPhotoBy groupBy = GroupPhotoBy.month,
+    PhotoSelectionController? selectionController,
+    ScrollController? controller,
+    void Function(List<Segment>)? onSegmentsChanged,
+    Future<void> Function()? onRefresh,
+    void Function(PhotoGridItem)? onTap,
+    List<Widget>? topSlivers,
+    void Function(Map<String, Rect>)? onLayoutInfoChanged,
+    required PhotoGridItemBuilder itemBuilder,
+  }) => PhotoGridView(
+    key: key,
+    items: items,
+    crossAxisCount: crossAxisCount,
+    mainAxisSpacing: mainAxisSpacing,
+    crossAxisSpacing: crossAxisSpacing,
+    childAspectRatio: childAspectRatio,
+    mainAxisExtent: mainAxisExtent,
+    groupBy: groupBy,
+    selectionController: selectionController,
+    controller: controller,
+    onSegmentsChanged: onSegmentsChanged,
+    onRefresh: onRefresh,
+    onTap: onTap,
+    topSlivers: topSlivers,
+    onLayoutInfoChanged: onLayoutInfoChanged,
+    itemBuilder: itemBuilder,
+  );
+
+  /// 列表模式：强制一行一个，并指定固定的项高度 [itemHeight]。
+  factory PhotoGridView.list({
+    Key? key,
+    required List<PhotoGridItem> items,
+    required double itemHeight,
+    double mainAxisSpacing = 0.0,
+    double crossAxisSpacing = 0.0,
+    GroupPhotoBy groupBy = GroupPhotoBy.month,
+    PhotoSelectionController? selectionController,
+    ScrollController? controller,
+    void Function(List<Segment>)? onSegmentsChanged,
+    Future<void> Function()? onRefresh,
+    void Function(PhotoGridItem)? onTap,
+    List<Widget>? topSlivers,
+    void Function(Map<String, Rect>)? onLayoutInfoChanged,
+    required PhotoGridItemBuilder itemBuilder,
+  }) => PhotoGridView(
+    key: key,
+    items: items,
+    crossAxisCount: 1,
+    mainAxisSpacing: mainAxisSpacing,
+    crossAxisSpacing: crossAxisSpacing,
+    mainAxisExtent: itemHeight,
+    childAspectRatio: 1.0,
+    groupBy: groupBy,
+    selectionController: selectionController,
+    controller: controller,
+    onSegmentsChanged: onSegmentsChanged,
+    onRefresh: onRefresh,
+    onTap: onTap,
+    topSlivers: topSlivers,
+    onLayoutInfoChanged: onLayoutInfoChanged,
+    itemBuilder: itemBuilder,
+  );
 
   @override
   State<PhotoGridView> createState() => _PhotoGridViewState();
@@ -104,9 +179,11 @@ class _PhotoGridViewState extends State<PhotoGridView> {
   List<Segment> _segments = [];
 
   double? _lastMaxWidth;
-  int? _lastAssetsPerRow;
-  double? _lastMargin;
+  int? _lastCrossAxisCount;
+  double? _lastMainAxisSpacing;
+  double? _lastCrossAxisSpacing;
   double? _lastAspectRatio;
+  double? _lastMainAxisExtent;
   List<Segment>? _cachedSegments;
 
   @override
@@ -137,9 +214,11 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     }
     if (oldWidget.items != widget.items ||
         oldWidget.groupBy != widget.groupBy ||
-        oldWidget.assetsPerRow != widget.assetsPerRow ||
-        oldWidget.margin != widget.margin ||
-        oldWidget.childAspectRatio != widget.childAspectRatio) {
+        oldWidget.crossAxisCount != widget.crossAxisCount ||
+        oldWidget.mainAxisSpacing != widget.mainAxisSpacing ||
+        oldWidget.crossAxisSpacing != widget.crossAxisSpacing ||
+        oldWidget.childAspectRatio != widget.childAspectRatio ||
+        oldWidget.mainAxisExtent != widget.mainAxisExtent) {
       _rebuildRenderList();
     }
   }
@@ -276,9 +355,11 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     BuildContext context,
     int assetIndex,
     int count,
+    double tileWidth,
     double tileHeight,
-    double spacing,
-    int columnCount,
+    double mainAxisSpacing,
+    double crossAxisSpacing,
+    int crossAxisCount,
   ) {
     if (assetIndex < 0 || assetIndex >= widget.items.length) {
       return const SizedBox.shrink();
@@ -289,16 +370,14 @@ class _PhotoGridViewState extends State<PhotoGridView> {
       return const SizedBox.shrink();
     }
 
-    // tileWidth can simply be derived from constraints if needed, but since AssetRow is built inside _buildGrid,
-    // we can calculate the tile Width by aspectRatio. 
-    final tileWidth = tileHeight * widget.childAspectRatio;
     return _AssetRow(
       items: widget.items.sublist(assetIndex, end),
       absoluteOffset: assetIndex,
       width: tileWidth,
       height: tileHeight,
-      margin: spacing,
-      assetsPerRow: columnCount,
+      mainAxisSpacing: mainAxisSpacing,
+      crossAxisSpacing: crossAxisSpacing,
+      crossAxisCount: crossAxisCount,
       selectionController: widget.selectionController,
       onTap: widget.onTap,
       itemBuilder: widget.itemBuilder,
@@ -316,22 +395,28 @@ class _PhotoGridViewState extends State<PhotoGridView> {
 
         if (_cachedSegments != null && 
             _lastMaxWidth == screenWidth && 
-            _lastAssetsPerRow == widget.assetsPerRow &&
-            _lastMargin == widget.margin &&
+            _lastCrossAxisCount == widget.crossAxisCount &&
+            _lastMainAxisSpacing == widget.mainAxisSpacing &&
+            _lastCrossAxisSpacing == widget.crossAxisSpacing &&
             _lastAspectRatio == widget.childAspectRatio &&
+            _lastMainAxisExtent == widget.mainAxisExtent &&
             _buckets.isNotEmpty) {
            _segments = _cachedSegments!;
         } else {
-          final double spacing = widget.margin;
-          final int columnCount = (screenWidth / (screenWidth / widget.assetsPerRow)).floor();
-          final double tileWidth = (screenWidth - (columnCount - 1) * spacing) / columnCount;
-          final double tileHeight = tileWidth / widget.childAspectRatio;
+          final double mainAxisSpacing = widget.mainAxisSpacing;
+          final double crossAxisSpacing = widget.crossAxisSpacing;
+          final int crossAxisCount = widget.crossAxisCount;
+          
+          final double tileWidth = (screenWidth - (crossAxisCount - 1) * crossAxisSpacing) / crossAxisCount;
+          final double tileHeight = widget.mainAxisExtent ?? (tileWidth / widget.childAspectRatio);
 
           final builder = FixedSegmentBuilder(
             buckets: _buckets,
             tileHeight: tileHeight,
-            columnCount: columnCount,
-            spacing: spacing,
+            tileWidth: tileWidth,
+            columnCount: crossAxisCount,
+            mainAxisSpacing: mainAxisSpacing,
+            crossAxisSpacing: crossAxisSpacing,
             groupBy: widget.groupBy == GroupPhotoBy.day
                 ? GroupAssetsBy.day
                 : widget.groupBy == GroupPhotoBy.month
@@ -352,7 +437,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
                final startAssetIndex = segment.firstAssetIndex;
                
                for (int r = 0; r < rows; r++) {
-                 final rowY = segment.gridOffset + (r * (segment.tileHeight + segment.spacing));
+                 final rowY = segment.gridOffset + (r * (segment.tileHeight + segment.mainAxisSpacing));
                  final rowStartAsset = startAssetIndex + (r * segment.columnCount);
                  final rowCount = min(segment.columnCount, assetCount - (r * segment.columnCount));
                  
@@ -360,8 +445,8 @@ class _PhotoGridViewState extends State<PhotoGridView> {
                    final assetIndex = rowStartAsset + c;
                    if (assetIndex < widget.items.length) {
                      final item = widget.items[assetIndex];
-                     final x = c * (tileWidth + spacing);
-                     layoutMap[item.id] = Rect.fromLTWH(x, rowY, tileWidth, tileHeight);
+                     final x = c * (segment.tileWidth + segment.crossAxisSpacing);
+                     layoutMap[item.id] = Rect.fromLTWH(x, rowY, segment.tileWidth, segment.tileHeight);
                    }
                  }
                }
@@ -371,9 +456,11 @@ class _PhotoGridViewState extends State<PhotoGridView> {
           _segments = generatedSegments;
           _cachedSegments = _segments;
           _lastMaxWidth = screenWidth;
-          _lastAssetsPerRow = widget.assetsPerRow;
-          _lastMargin = widget.margin;
+          _lastCrossAxisCount = widget.crossAxisCount;
+          _lastMainAxisSpacing = widget.mainAxisSpacing;
+          _lastCrossAxisSpacing = widget.crossAxisSpacing;
           _lastAspectRatio = widget.childAspectRatio;
+          _lastMainAxisExtent = widget.mainAxisExtent;
           
           if (widget.onSegmentsChanged != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -447,8 +534,10 @@ class _PhotoGridViewState extends State<PhotoGridView> {
         context,
         segment.firstAssetIndex + assetIndex,
         numberOfAssets,
+        segment.tileWidth,
         segment.tileHeight,
-        segment.spacing,
+        segment.mainAxisSpacing,
+        segment.crossAxisSpacing,
         segment.columnCount,
       );
     }
@@ -462,8 +551,9 @@ class _AssetRow extends StatelessWidget {
   final int absoluteOffset;
   final double width;
   final double height;
-  final double margin;
-  final int assetsPerRow;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
+  final int crossAxisCount;
   final PhotoSelectionController? selectionController;
   final void Function(PhotoGridItem)? onTap;
   final PhotoGridItemBuilder itemBuilder;
@@ -473,8 +563,9 @@ class _AssetRow extends StatelessWidget {
     required this.absoluteOffset,
     required this.width,
     required this.height,
-    required this.margin,
-    required this.assetsPerRow,
+    required this.mainAxisSpacing,
+    required this.crossAxisSpacing,
+    required this.crossAxisCount,
     this.selectionController,
     this.onTap,
     required this.itemBuilder,
@@ -482,20 +573,64 @@ class _AssetRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 列表模式或者单项行优化：强制填满宽度以避免渲染细缝
+    if (crossAxisCount == 1 && items.length == 1) {
+      final item = items.first;
+      return PhotoGridItemIndexWrapper(
+        offset: absoluteOffset,
+        child: SizedBox(
+          width: double.infinity,
+          height: height,
+          child: _buildItemContent(context, item, absoluteOffset),
+        ),
+      );
+    }
+
+    // 满行优化：使用 Expanded 动态平分宽度，彻底解决 sub-pixel 留白问题
+    if (items.length == crossAxisCount) {
+      return Row(
+        children: items.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          final last = index + 1 == crossAxisCount;
+          final offsetIndex = absoluteOffset + index;
+
+          return Expanded(
+            child: PhotoGridItemIndexWrapper(
+              offset: offsetIndex,
+              child: SizedBox(
+                height: height,
+                child: Container(
+                  margin: EdgeInsets.only(right: last ? 0.0 : crossAxisSpacing),
+                  child: selectionController != null
+                      ? AnimatedBuilder(
+                          animation: selectionController!,
+                          builder: (context, _) => _buildItemContent(context, item, offsetIndex),
+                        )
+                      : _buildItemContent(context, item, offsetIndex),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    // 不满行（通常是 Bucket 的最后一行）：保持原有的固定宽度计算，遵循 GridView 靠左对齐逻辑
     return Row(
       children: items.asMap().entries.map((entry) {
         final index = entry.key;
         final item = entry.value;
-        final last = index + 1 == assetsPerRow;
+        final last = index + 1 == crossAxisCount;
         final offsetIndex = absoluteOffset + index;
 
-        final itemWidget = PhotoGridItemIndexWrapper(
+        return PhotoGridItemIndexWrapper(
           offset: offsetIndex,
           child: SizedBox(
             width: width,
             height: height,
             child: Container(
-              margin: EdgeInsets.only(right: last ? 0.0 : margin),
+              margin: EdgeInsets.only(right: last ? 0.0 : crossAxisSpacing),
               child: selectionController != null
                   ? AnimatedBuilder(
                       animation: selectionController!,
@@ -505,8 +640,6 @@ class _AssetRow extends StatelessWidget {
             ),
           ),
         );
-
-        return itemWidget;
       }).toList(),
     );
   }

@@ -29,10 +29,11 @@ class _MultiSliverExampleState extends State<MultiSliverExample> {
 
         return Stack(
           children: [
-            PhotoGridGallery(
+            PhotoGridGallery.grid(
               items: items,
-              assetsPerRow: 4,
-              margin: 2.0,
+              crossAxisCount: 4,
+              mainAxisSpacing: 2.0,
+              crossAxisSpacing: 2.0,
               groupBy: GroupPhotoBy.month,
               showScrubber: true,
               selectionController: controller,

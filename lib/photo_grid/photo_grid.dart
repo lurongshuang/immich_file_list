@@ -6,3 +6,4 @@ export 'logic/photo_drag_region.dart';
 export 'logic/photo_desktop_selection_region.dart';
 export 'core/photo_grid_segment.dart';
 export 'core/photo_grid_adaptive.dart';
+export 'core/photo_grid_sliver_segmented_list.dart';

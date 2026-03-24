@@ -18,7 +18,7 @@ class PhotoDesktopSelectionRegion extends StatefulWidget {
   final Widget child;
   final PhotoSelectionController selectionController;
   final List<String> allItemIds;
-  final int assetsPerRow;
+  final int crossAxisCount;
   final ScrollController? scrollController;
   final Map<String, Rect>? itemLayoutMap;
 
@@ -27,7 +27,7 @@ class PhotoDesktopSelectionRegion extends StatefulWidget {
     required this.child,
     required this.selectionController,
     required this.allItemIds,
-    this.assetsPerRow = 4,
+    this.crossAxisCount = 4,
     this.scrollController,
     this.itemLayoutMap,
   });
@@ -303,9 +303,9 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
     } else if (logicalKey == LogicalKeyboardKey.arrowRight) {
       nextFocus = min(totalCount - 1, currentFocus + 1);
     } else if (logicalKey == LogicalKeyboardKey.arrowUp) {
-      nextFocus = max(0, currentFocus - widget.assetsPerRow);
+      nextFocus = max(0, currentFocus - widget.crossAxisCount);
     } else if (logicalKey == LogicalKeyboardKey.arrowDown) {
-      nextFocus = min(totalCount - 1, currentFocus + widget.assetsPerRow);
+      nextFocus = min(totalCount - 1, currentFocus + widget.crossAxisCount);
     } else if (logicalKey == LogicalKeyboardKey.keyA && isControlPressed) {
       widget.selectionController.selectAll(widget.allItemIds);
       return KeyEventResult.handled;
