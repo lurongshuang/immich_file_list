@@ -32,6 +32,10 @@ typedef PhotoGridRowBuilder = Widget Function(
   double crossAxisSpacing,
   int crossAxisCount,
 );
+typedef PhotoGridDividerBuilder = Widget Function(
+  BuildContext context,
+  int index,
+);
 
 /// 核心组合组件：提供高性能照片时间轴网格展示功能。
 ///
@@ -109,6 +113,9 @@ class PhotoGridView extends StatefulWidget {
   /// 自定义 Header 高度的回调函数。
   final double Function(HeaderType)? headerExtentCalculator;
 
+  /// 分割线构建器，主要用于列表模式下的项间分割。
+  final PhotoGridDividerBuilder? dividerBuilder;
+
   const PhotoGridView({
     super.key,
     required this.items,
@@ -133,6 +140,7 @@ class PhotoGridView extends StatefulWidget {
     this.headerBuilder,
     this.headerExtentCalculator,
     this.disableInternalSelectionToggle = false,
+    this.dividerBuilder,
     required this.itemBuilder,
   });
 
@@ -160,6 +168,7 @@ class PhotoGridView extends StatefulWidget {
     double Function(HeaderType)? headerExtentCalculator,
     bool enableGrouping = true,
     bool disableInternalSelectionToggle = false,
+    PhotoGridDividerBuilder? dividerBuilder,
     required PhotoGridItemBuilder itemBuilder,
   }) => PhotoGridView(
     key: key,
@@ -184,6 +193,7 @@ class PhotoGridView extends StatefulWidget {
     headerBuilder: headerBuilder,
     headerExtentCalculator: headerExtentCalculator,
     disableInternalSelectionToggle: disableInternalSelectionToggle,
+    dividerBuilder: dividerBuilder,
     itemBuilder: itemBuilder,
   );
 
@@ -209,6 +219,7 @@ class PhotoGridView extends StatefulWidget {
     double Function(HeaderType)? headerExtentCalculator,
     bool enableGrouping = true,
     bool disableInternalSelectionToggle = false,
+    PhotoGridDividerBuilder? dividerBuilder,
     required PhotoGridItemBuilder itemBuilder,
   }) => PhotoGridView(
     key: key,
@@ -233,6 +244,7 @@ class PhotoGridView extends StatefulWidget {
     headerBuilder: headerBuilder,
     headerExtentCalculator: headerExtentCalculator,
     disableInternalSelectionToggle: disableInternalSelectionToggle,
+    dividerBuilder: dividerBuilder,
     itemBuilder: itemBuilder,
   );
 
@@ -443,6 +455,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     double mainAxisSpacing,
     double crossAxisSpacing,
     int crossAxisCount,
+    bool showDivider,
   ) {
     if (assetIndex < 0 || assetIndex >= widget.items.length) {
       return const SizedBox.shrink();
@@ -467,6 +480,8 @@ class _PhotoGridViewState extends State<PhotoGridView> {
       onLongPress: widget.onLongPress,
       onSecondaryTap: widget.onSecondaryTap,
       disableInternalSelectionToggle: widget.disableInternalSelectionToggle,
+      dividerBuilder: widget.dividerBuilder,
+      showDivider: showDivider,
       itemBuilder: widget.itemBuilder,
     );
   }
@@ -632,6 +647,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
         segment.mainAxisSpacing,
         segment.crossAxisSpacing,
         segment.columnCount,
+        widget.dividerBuilder != null && index < segment.lastIndex,
       );
     }
 
@@ -654,6 +670,8 @@ class _AssetRow extends StatelessWidget {
   final void Function(PhotoGridItem item, Offset position)? onSecondaryTap;
   final bool disableInternalSelectionToggle;
   final PhotoGridItemBuilder itemBuilder;
+  final PhotoGridDividerBuilder? dividerBuilder;
+  final bool showDivider;
 
   const _AssetRow({
     required this.items,
@@ -669,12 +687,14 @@ class _AssetRow extends StatelessWidget {
     this.onLongPress,
     this.onSecondaryTap,
     required this.disableInternalSelectionToggle,
+    this.dividerBuilder,
+    this.showDivider = false,
     required this.itemBuilder,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final row = Row(
       children: items.asMap().entries.map((entry) {
         final index = entry.key;
         final item = entry.value;
@@ -699,6 +719,18 @@ class _AssetRow extends StatelessWidget {
         );
       }).toList(),
     );
+
+    if (showDivider && dividerBuilder != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          row,
+          dividerBuilder!(context, absoluteOffset),
+        ],
+      );
+    }
+    return row;
   }
 
   /// 构建具体的单项内容
