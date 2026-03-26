@@ -117,7 +117,6 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
 
     if (hitIndex != null) {
       final index = hitIndex.offset;
-      widget.selectionController.setAnchorIndex(index);
 
       if (isRightClick) {
         // 右键点击项：如果项未选中，则选中它（并清空其他，符合 macOS Finder 逻辑）
@@ -134,11 +133,10 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
         widget.selectionController.selectRange(anchor, index, widget.allItemIds, additive: isControlPressed);
       } else if (isControlPressed) {
         widget.selectionController.toggleItem(widget.allItemIds[index], index: index);
-        // Ctrl/Cmd 点选：更新锚点为当前点击位置
+        // Ctrl/Cmd 点选：即使是反选，也将该点设为新锚点，以便后续 Shift 连选
         widget.selectionController.setAnchorIndex(index);
       } else {
-        // 普通左键单击（不带修饰键）：直接执行选中，不等待 onTap 的 300ms 延迟
-        // 这使得在开启 onDoubleTap 的情况下，选中反馈依然是瞬时的
+        // 普通左键单击（不带修饰键）：直接执行选中
         widget.selectionController.selectOnly(widget.allItemIds[index], index: index);
       }
     } else {
