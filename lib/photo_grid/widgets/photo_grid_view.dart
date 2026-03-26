@@ -674,50 +674,6 @@ class _AssetRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 列表模式或者单项行优化：强制填满宽度以避免渲染细缝
-    if (crossAxisCount == 1 && items.length == 1) {
-      final item = items.first;
-      return PhotoGridItemIndexWrapper(
-        offset: absoluteOffset,
-        child: SizedBox(
-          width: double.infinity,
-          height: height,
-          child: _buildItemContent(context, item, absoluteOffset),
-        ),
-      );
-    }
-
-    // 满行优化：使用 Expanded 动态平分宽度，彻底解决 sub-pixel 留白问题
-    if (items.length == crossAxisCount) {
-      return Row(
-        children: items.asMap().entries.map((entry) {
-          final index = entry.key;
-          final item = entry.value;
-          final last = index + 1 == crossAxisCount;
-          final offsetIndex = absoluteOffset + index;
-
-          return Expanded(
-            child: PhotoGridItemIndexWrapper(
-              offset: offsetIndex,
-              child: SizedBox(
-                height: height,
-                child: Container(
-                  margin: EdgeInsets.only(right: last ? 0.0 : crossAxisSpacing),
-                  child: selectionController != null
-                      ? AnimatedBuilder(
-                          animation: selectionController!,
-                          builder: (context, _) => _buildItemContent(context, item, offsetIndex),
-                        )
-                      : _buildItemContent(context, item, offsetIndex),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      );
-    }
-
-    // 不满行（通常是 Bucket 的最后一行）：保持原有的固定宽度计算，遵循 GridView 靠左对齐逻辑
     return Row(
       children: items.asMap().entries.map((entry) {
         final index = entry.key;

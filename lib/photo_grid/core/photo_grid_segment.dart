@@ -199,9 +199,9 @@ class FixedSegmentBuilder {
           break;
       }
       
-      final currentHeaderExtent = _calculateHeaderExtent(timelineHeader);
+      final currentHeaderExtent = _calculateHeaderExtent(timelineHeader) + (i == 0 ? mainAxisSpacing : 0);
       final segmentStartOffset = startOffset;
-      startOffset += currentHeaderExtent + (tileHeight * numberOfRows) + mainAxisSpacing * (numberOfRows - 1);
+      startOffset += currentHeaderExtent + (tileHeight * numberOfRows) + mainAxisSpacing * (numberOfRows + 1);
       final segmentEndOffset = startOffset;
 
       segments.add(

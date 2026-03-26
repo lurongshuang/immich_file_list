@@ -12,8 +12,11 @@ class DesktopMacOSExample extends StatefulWidget {
 }
 
 class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
-  final List<DummyPhotoItem> _items = DummyDataFactory.generateDummyData(60, 5000);
-  
+  final List<DummyPhotoItem> _items = DummyDataFactory.generateDummyData(
+    60,
+    5000,
+  );
+
   double _crossAxisCount = 6;
   double _mainAxisSpacing = 4.0;
   double _crossAxisSpacing = 4.0;
@@ -34,21 +37,38 @@ class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(20),
-                    blurRadius: 4,
-                  ),
+                  BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 4),
                 ],
               ),
               child: Row(
                 children: [
-                   _buildControl('列数: ${_crossAxisCount.toInt()}', (v) => setState(() => _crossAxisCount = v), 2, 12),
-                   const VerticalDivider(),
-                   _buildControl('主间距: ${_mainAxisSpacing.toInt()}', (v) => setState(() => _mainAxisSpacing = v), 0, 20),
-                   const VerticalDivider(),
-                   _buildControl('横间距: ${_crossAxisSpacing.toInt()}', (v) => setState(() => _crossAxisSpacing = v), 0, 20),
-                   const VerticalDivider(),
-                   _buildControl('比例: ${_aspectRatio.toStringAsFixed(1)}', (v) => setState(() => _aspectRatio = v), 0.5, 2.0),
+                  _buildControl(
+                    '列数: ${_crossAxisCount.toInt()}',
+                    (v) => setState(() => _crossAxisCount = v),
+                    2,
+                    12,
+                  ),
+                  const VerticalDivider(),
+                  _buildControl(
+                    '主间距: ${_mainAxisSpacing.toInt()}',
+                    (v) => setState(() => _mainAxisSpacing = v),
+                    0,
+                    20,
+                  ),
+                  const VerticalDivider(),
+                  _buildControl(
+                    '横间距: ${_crossAxisSpacing.toInt()}',
+                    (v) => setState(() => _crossAxisSpacing = v),
+                    0,
+                    20,
+                  ),
+                  const VerticalDivider(),
+                  _buildControl(
+                    '比例: ${_aspectRatio.toStringAsFixed(1)}',
+                    (v) => setState(() => _aspectRatio = v),
+                    0.5,
+                    2.0,
+                  ),
                 ],
               ),
             ),
@@ -79,9 +99,12 @@ class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
                 showScrubber: true,
                 selectionController: controller,
                 onTap: (item) => handleTap(context, item, controller),
-                onDoubleTap: (item) => handleDoubleTap(context, item, controller),
-                onLongPress: (item) => handleLongPress(context, item, controller),
-                onSecondaryTap: (item, pos) => handleSecondaryTap(context, item, pos),
+                onDoubleTap: (item) =>
+                    handleDoubleTap(context, item, controller),
+                onLongPress: (item) =>
+                    handleLongPress(context, item, controller),
+                onSecondaryTap: (item, pos) =>
+                    handleSecondaryTap(context, item, pos),
                 // 自定义滑块样式：现代简约圆形
                 scrubberThumbBuilder: (context, offset, isDragging) {
                   return AnimatedContainer(
@@ -90,17 +113,21 @@ class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
                     height: 60,
                     margin: const EdgeInsets.only(right: 4),
                     decoration: BoxDecoration(
-                      color: isDragging 
-                          ? Theme.of(context).primaryColor 
+                      color: isDragging
+                          ? Theme.of(context).primaryColor
                           : Colors.grey.withAlpha(150),
                       borderRadius: BorderRadius.circular(10),
-                      boxShadow: isDragging ? [
-                        BoxShadow(
-                          color: Theme.of(context).primaryColor.withAlpha(100),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        )
-                      ] : [],
+                      boxShadow: isDragging
+                          ? [
+                              BoxShadow(
+                                color: Theme.of(
+                                  context,
+                                ).primaryColor.withAlpha(100),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              ),
+                            ]
+                          : [],
                     ),
                   );
                 },
@@ -108,7 +135,10 @@ class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
                 scrubberLabelBuilder: (context, label, isDragging) {
                   return Container(
                     margin: const EdgeInsets.only(right: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).primaryColor.withAlpha(220),
                       borderRadius: BorderRadius.circular(8),
@@ -139,22 +169,27 @@ class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
     );
   }
 
-  Widget _buildControl(String label, ValueChanged<double> onChanged, double min, double max) {
-    final double currentValue = label.contains('列') 
-        ? _crossAxisCount 
-        : (label.contains('主间') ? _mainAxisSpacing : (label.contains('横间') ? _crossAxisSpacing : _aspectRatio));
+  Widget _buildControl(
+    String label,
+    ValueChanged<double> onChanged,
+    double min,
+    double max,
+  ) {
+    final double currentValue = label.contains('列')
+        ? _crossAxisCount
+        : (label.contains('主间')
+              ? _mainAxisSpacing
+              : (label.contains('横间') ? _crossAxisSpacing : _aspectRatio));
 
     return Expanded(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-           Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-           Slider(
-             value: currentValue,
-             min: min,
-             max: max,
-             onChanged: onChanged,
-           ),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+          Slider(value: currentValue, min: min, max: max, onChanged: onChanged),
         ],
       ),
     );
