@@ -60,6 +60,8 @@ class PhotoGridScrubber extends StatefulWidget {
   final double labelEndOffset;
   /// 滑块相对于右侧的偏移。
   final double thumbEndOffset;
+  /// 触控热区的宽度。越大越容易按到手柄。
+  final double hitTestWidth;
   /// 磁吸生效的像素阈值。
   final double snapThreshold;
   /// 聚合维度（年/月）。
@@ -98,6 +100,7 @@ class PhotoGridScrubber extends StatefulWidget {
     this.segmentEndOffset = 100.0,
     this.labelEndOffset = 12.0,
     this.thumbEndOffset = 0.0,
+    this.hitTestWidth = 20.0,
     this.snapThreshold = kDefaultScrubberSnapThreshold,
     this.groupBy = GroupPhotoBy.month,
     this.scrollOffsetBaseline = 0.0,
@@ -463,17 +466,14 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
               return PositionedDirectional(
                 top: offset + widget.topPadding,
                 end: widget.thumbEndOffset,
-                child: GestureDetector(
-                  onVerticalDragStart: _onDragStart,
-                  onVerticalDragUpdate: _onDragUpdate,
-                  onVerticalDragEnd: _onDragEnd,
-                  child: FadeTransition(
-                    opacity: _thumbAnimation,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (widget.showPrompt && labelText != null)
-                          FadeTransition(
+                child: FadeTransition(
+                  opacity: _thumbAnimation,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.showPrompt && labelText != null)
+                        IgnorePointer(
+                          child: FadeTransition(
                             opacity: _labelAnimation,
                             child: widget.labelBuilder?.call(ctx, labelText, _isDragging) ??
                                 Container(
@@ -495,29 +495,46 @@ class _PhotoGridScrubberState extends State<PhotoGridScrubber> with TickerProvid
                                   ),
                                 ),
                           ),
-                        const SizedBox(width: 8),
-                        widget.thumbBuilder?.call(ctx, offset, _isDragging) ??
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: _isDragging ? 12 : 8,
-                              height: widget.thumbHeight,
-                              margin: const EdgeInsets.only(right: 4),
-                              decoration: BoxDecoration(
-                                color: _isDragging
-                                    ? Theme.of(ctx).primaryColor
-                                    : Colors.grey.withAlpha(150),
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: _isDragging
-                                    ? [BoxShadow(
-                                        color: Theme.of(ctx).primaryColor.withAlpha(100),
-                                        blurRadius: 10,
-                                        spreadRadius: 2,
-                                      )]
-                                    : [],
-                              ),
-                            ),
-                      ],
-                    ),
+                        ),
+                      GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onVerticalDragStart: _onDragStart,
+                        onVerticalDragUpdate: _onDragUpdate,
+                        onVerticalDragEnd: _onDragEnd,
+                        child: Container(
+                          constraints: BoxConstraints(minWidth: widget.hitTestWidth),
+                          alignment: Alignment.centerRight,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(width: 8),
+                              widget.thumbBuilder?.call(ctx, offset, _isDragging) ??
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    width: _isDragging ? 12 : 8,
+                                    height: widget.thumbHeight,
+                                    margin: const EdgeInsets.only(right: 4),
+                                    decoration: BoxDecoration(
+                                      color: _isDragging
+                                          ? Theme.of(ctx).primaryColor
+                                          : Colors.grey.withAlpha(150),
+                                      borderRadius: BorderRadius.circular(10),
+                                      boxShadow: _isDragging
+                                          ? [
+                                              BoxShadow(
+                                                color: Theme.of(ctx).primaryColor.withAlpha(100),
+                                                blurRadius: 10,
+                                                spreadRadius: 2,
+                                              )
+                                            ]
+                                          : [],
+                                    ),
+                                  ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
