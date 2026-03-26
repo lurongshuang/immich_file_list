@@ -16,6 +16,7 @@ import 'pages/fixed_extent_list_page.dart';
 import 'pages/ui_customization_page.dart';
 import 'pages/no_grouping_page.dart';
 import 'pages/header_height_page.dart';
+import 'pages/divider_list_page.dart';
 
 void main() {
   runApp(const PhotoGridExampleApp());
@@ -148,6 +149,13 @@ class ExampleHomePage extends StatelessWidget {
             title: const Text('15. 自定义 Header 高度'),
             subtitle: const Text('演示 headerExtentCalculator 如何自定义每个 Header 的高度。'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HeaderHeightExample())),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.line_weight),
+            title: const Text('16. 列表分割线示例 (新)'),
+            subtitle: const Text('演示如何通过 dividerBuilder 在列表项之间添加自定义分割线，并支持间距控制。'),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DividerListExample())),
           ),
         ],
       ),
