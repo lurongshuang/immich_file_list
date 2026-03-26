@@ -47,12 +47,15 @@ class PhotoSelectionController extends ChangeNotifier {
     }
   }
 
+  // 用于区分连续点击的记录器
+  String? _lastId;
+
   /// 翻转单张照片的选择状态。
-  /// [index] 可选，用于更新锚点位置。
   void toggleItem(String id, {int? index}) {
-    // 如果刚刚在同一毫秒或极短时间内处理过（例如 PointerDown 已选中），本次 Tap 忽略
     final now = DateTime.now().millisecondsSinceEpoch;
-    if (now - _lastTick < 50) return; 
+    // 如果是短时间内对同一 ID 的重复操作（例如 PointerDown 和 Tap 产生竞争），则忽略。
+    // 但如果是不同 ID 的快速点击，应当允许（此时 interval 可能小于 50ms）
+    if (id == _lastId && now - _lastTick < 300) return; 
 
     if (_selectedIds.contains(id)) {
       _selectedIds.remove(id);
@@ -60,25 +63,35 @@ class PhotoSelectionController extends ChangeNotifier {
       _selectedIds.add(id);
       if (index != null) _selectionAnchorIndex = index;
     }
+    _lastId = id;
     _lastTick = now;
     notifyListeners();
   }
 
   /// 强制选中某张照片。
   void selectItem(String id, {int? index}) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (id == _lastId && now - _lastTick < 50) return;
+
     _selectedIds.add(id);
     if (index != null) _selectionAnchorIndex = index;
-    _lastTick = DateTime.now().millisecondsSinceEpoch;
+    _lastId = id;
+    _lastTick = now;
     notifyListeners();
   }
 
   /// 仅选中当前单项，清空其他所有选中。
   void selectOnly(String id, {int? index}) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    // selectOnly 通常来自明确的点选意图，防御性设置较短
+    if (id == _lastId && now - _lastTick < 50) return;
+
     _selectedIds.clear();
     _selectedIds.add(id);
     if (index != null) _selectionAnchorIndex = index;
     _isSelectionActive = true;
-    _lastTick = DateTime.now().millisecondsSinceEpoch;
+    _lastId = id;
+    _lastTick = now;
     notifyListeners();
   }
 

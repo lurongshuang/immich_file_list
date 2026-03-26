@@ -709,11 +709,13 @@ class _AssetRow extends StatelessWidget {
             child: Container(
               margin: EdgeInsets.only(right: last ? 0.0 : crossAxisSpacing),
               child: selectionController != null
-                  ? AnimatedBuilder(
-                      animation: selectionController!,
-                      builder: (context, _) => _buildItemContent(context, item, offsetIndex),
+                  ? _SelectionObserver(
+                      controller: selectionController!,
+                      itemId: item.id,
+                      builder: (context, isSelected, selectionActive) => 
+                        _buildItemContent(context, item, offsetIndex, isSelected, selectionActive),
                     )
-                  : _buildItemContent(context, item, offsetIndex),
+                  : _buildItemContent(context, item, offsetIndex, false, false),
             ),
           ),
         );
@@ -734,10 +736,13 @@ class _AssetRow extends StatelessWidget {
   }
 
   /// 构建具体的单项内容
-  Widget _buildItemContent(BuildContext context, PhotoGridItem item, int absoluteOffset) {
-    final bool selectionActive = selectionController?.isSelectionActive ?? false;
-    final bool isSelected = selectionController?.selectedIds.contains(item.id) ?? false;
-
+  Widget _buildItemContent(
+    BuildContext context, 
+    PhotoGridItem item, 
+    int absoluteOffset,
+    bool isSelected,
+    bool selectionActive,
+  ) {
     return GestureDetector(
       onTap: () {
         if (selectionActive && !disableInternalSelectionToggle) {
@@ -756,5 +761,75 @@ class _AssetRow extends StatelessWidget {
         selectionActive,
       ),
     );
+  }
+}
+
+/// 内部高效观察者，用于将全局 PhotoSelectionController 的通知转换为局部按需刷新。
+/// 
+/// 该组件能够大幅降低大数据量下频繁点选/框选时的 CPU 压力，因为它确保了
+/// 只有选中状态真正发生变化的项才会触发重建，而不仅仅是监听了 Controller。
+class _SelectionObserver extends StatefulWidget {
+  final PhotoSelectionController controller;
+  final String itemId;
+  final Widget Function(BuildContext context, bool isSelected, bool selectionActive) builder;
+
+  const _SelectionObserver({
+    required this.controller,
+    required this.itemId,
+    required this.builder,
+  });
+
+  @override
+  State<_SelectionObserver> createState() => _SelectionObserverState();
+}
+
+class _SelectionObserverState extends State<_SelectionObserver> {
+  late bool _isSelected;
+  late bool _selectionActive;
+
+  @override
+  void initState() {
+    super.initState();
+    _isSelected = widget.controller.selectedIds.contains(widget.itemId);
+    _selectionActive = widget.controller.isSelectionActive;
+    widget.controller.addListener(_handleUpdate);
+  }
+
+  @override
+  void didUpdateWidget(_SelectionObserver oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleUpdate);
+      widget.controller.addListener(_handleUpdate);
+    }
+    // 强制同步一次最新状态
+    _isSelected = widget.controller.selectedIds.contains(widget.itemId);
+    _selectionActive = widget.controller.isSelectionActive;
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleUpdate);
+    super.dispose();
+  }
+
+  void _handleUpdate() {
+    final bool nextSelected = widget.controller.selectedIds.contains(widget.itemId);
+    final bool nextActive = widget.controller.isSelectionActive;
+    
+    // 核心优化点：只有当本项的状态确实发生变化时才调用 setState()。
+    if (nextSelected != _isSelected || nextActive != _selectionActive) {
+      if (mounted) {
+        setState(() {
+          _isSelected = nextSelected;
+          _selectionActive = nextActive;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, _isSelected, _selectionActive);
   }
 }

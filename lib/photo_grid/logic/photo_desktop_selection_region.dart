@@ -42,13 +42,19 @@ class PhotoDesktopSelectionRegion extends StatefulWidget {
 }
 
 class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegion> with SingleTickerProviderStateMixin {
-  Offset? _selectionStartLocal; // 相对容器起始坐标 (随滚动移动)
-  Offset? _selectionEndLocal;   // 相对当前视口坐标 (鼠标位置)
+  // 框选相关状态使用 ValueNotifier 以便在 PointerMove 时实现局部重绘，避免触发整个 PhotoGridView 的 LayoutBuilder
+  final ValueNotifier<Rect?> _selectionRectNotifier = ValueNotifier<Rect?>(null);
   
   // 核心逻辑坐标：相对于滚动内容顶部的偏移
   Offset? _logicStart; 
   bool _isSelecting = false;
+  bool _dragHappened = false;           // 是否发生了实质性的位移（用于区分点击和框选）
+  String? _pendingReduceSelectionId;    // 准备在 PointerUp 时执行唯一选中的 ID
+  int? _pendingReduceSelectionIndex;    // 准备在 PointerUp 时执行唯一选中的索引
   final FocusNode _focusNode = FocusNode();
+
+  // 辅助变量：记录当前的 selectionEndLocal 用于 AutoScroll 逻辑，不触发 UI 重播
+  Offset? _selectionEndLocal;
 
   // 自动滚动相关
   late final Ticker _scrollTicker;
@@ -65,6 +71,7 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
   void dispose() {
     _focusNode.dispose();
     _scrollTicker.dispose();
+    _selectionRectNotifier.dispose();
     super.dispose();
   }
 
@@ -115,70 +122,91 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
     final hitIndex = _getIndexAtPosition(event.position);
     final isHeader = _isHeaderAtPosition(event.position);
 
+    _dragHappened = false;
+    _pendingReduceSelectionId = null;
+    _pendingReduceSelectionIndex = null;
+
     if (hitIndex != null) {
       final index = hitIndex.offset;
+      final id = widget.allItemIds[index];
 
       if (isRightClick) {
-        // 右键点击项：如果项未选中，则选中它（并清空其他，符合 macOS Finder 逻辑）
-        // 如果项已选中，则保持现状（用于显示针对多项的 Context Menu）
-        if (!widget.selectionController.selectedIds.contains(widget.allItemIds[index])) {
-          widget.selectionController.selectOnly(widget.allItemIds[index], index: index);
+        if (!widget.selectionController.selectedIds.contains(id)) {
+          widget.selectionController.selectOnly(id, index: index);
         }
-        return; // 右键不触发框选
+        return; 
       }
 
       if (isShiftPressed) {
-        // Shift 连选：锚点来自上一步的点选。如果没有锚点，以当前位置为锚点。
         final anchor = widget.selectionController.selectionAnchorIndex ?? index;
         widget.selectionController.selectRange(anchor, index, widget.allItemIds, additive: isControlPressed);
       } else if (isControlPressed) {
-        widget.selectionController.toggleItem(widget.allItemIds[index], index: index);
-        // Ctrl/Cmd 点选：即使是反选，也将该点设为新锚点，以便后续 Shift 连选
+        widget.selectionController.toggleItem(id, index: index);
         widget.selectionController.setAnchorIndex(index);
       } else {
-        // 普通左键单击（不带修饰键）：直接执行选中
-        widget.selectionController.selectOnly(widget.allItemIds[index], index: index);
+        if (!widget.selectionController.selectedIds.contains(id)) {
+          widget.selectionController.selectOnly(id, index: index);
+        } else {
+          _pendingReduceSelectionId = id;
+          _pendingReduceSelectionIndex = index;
+          widget.selectionController.setAnchorIndex(index);
+        }
       }
     } else {
-      if (isRightClick) return; // 右键点击空白处不执行任何操作
+      if (isRightClick) return; 
 
-      // 点击空白处开始框选
       final scrollOffset = widget.scrollController?.hasClients == true ? widget.scrollController!.offset : 0.0;
       
-      _selectionStartLocal = event.localPosition;
       _logicStart = Offset(event.localPosition.dx, event.localPosition.dy + scrollOffset);
+      
+      // 不再使用 setState，直接更新 ValueNotifier。由于 build 中始终保留 ValueListenableBuilder，选框会根据 rect 是否为 null 自动显示/隐藏。
       _isSelecting = true;
+      _selectionRectNotifier.value = Rect.fromPoints(event.localPosition, event.localPosition);
+      _selectionEndLocal = event.localPosition;
 
-      // 如果点击的是 Header 或者是按下了修饰键，不要清除已有选中
       if (!isControlPressed && !isShiftPressed && !isHeader) {
         widget.selectionController.clearSelection();
       }
-      // 记录当前已选，用于框选时的增量计算 (macOS 风格：框选通常是替换或反选，但我们做简单的增量/替换)
       widget.selectionController.startDragSelection(null); 
     }
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
-    if (!_isSelecting || _selectionStartLocal == null) return;
+    if (!_dragHappened && (event.localDelta.dx.abs() > 2 || event.localDelta.dy.abs() > 2)) {
+       _dragHappened = true;
+    }
 
-    setState(() {
-      _selectionEndLocal = event.localPosition;
-    });
+    if (!_isSelecting || _logicStart == null) return;
+
+    final startLocal = Offset(_logicStart!.dx, _logicStart!.dy - (widget.scrollController?.hasClients == true ? widget.scrollController!.offset : 0.0));
+    _selectionRectNotifier.value = Rect.fromPoints(startLocal, event.localPosition);
+    _selectionEndLocal = event.localPosition;
 
     _updateSelection(event.localPosition);
     _checkAutoScroll(event.localPosition);
   }
 
   void _handlePointerUp(PointerUpEvent event) {
-    setState(() {
+    if (_pendingReduceSelectionId != null) {
+      if (!_dragHappened) {
+         widget.selectionController.selectOnly(_pendingReduceSelectionId!, index: _pendingReduceSelectionIndex);
+      }
+      _pendingReduceSelectionId = null;
+      _pendingReduceSelectionIndex = null;
+    }
+    _dragHappened = false;
+
+    if (_isSelecting) {
+      // 这里的清理全部改为通过 ValueNotifier 触发局部刷新，不再调用 setState 导致整个 grid 重建
       _isSelecting = false;
-      _selectionStartLocal = null;
-      _selectionEndLocal = null;
+      _selectionRectNotifier.value = null;
       _logicStart = null;
+      _selectionEndLocal = null;
       _scrollVelocity = 0;
+      
       if (_scrollTicker.isActive) _scrollTicker.stop();
       widget.selectionController.endDragSelection();
-    });
+    }
   }
 
   void _updateSelection(Offset localPointerPos) {
@@ -197,9 +225,16 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
 
     // 遍历 Render tree 或使用 LayoutMap 查找覆盖项
     if (widget.itemLayoutMap != null && widget.itemLayoutMap!.isNotEmpty) {
-      // 调整策略：直接收集 IDs
       final ids = <String>{};
+      
+      // 优化：仅遍历与当前框选矩形在 Y 轴上有重叠的项
+      // 由于 layoutMap 通常是按时间顺序生成的，其 Rect.top 往往具有一定的单调性
+      // 这里进行简单的边界过滤以减少不必要的 overlaps 计算
+      final viewTop = logicRect.top;
+      final viewBottom = logicRect.bottom;
+      
       widget.itemLayoutMap!.forEach((id, rect) {
+         if (rect.bottom < viewTop || rect.top > viewBottom) return;
          if (logicRect.overlaps(rect)) {
             ids.add(id);
          }
@@ -255,7 +290,7 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
         final childRectInViewport = MatrixUtils.transformRect(childTransform, paintBounds);
         
         Rect targetChildRect = childRectInViewport;
-        Rect targetTestRect = rect;
+        // Rect targetTestRect = rect; // This line is not needed, rect is already the target test rect
 
         if (contentSpace) {
            final offset = widget.scrollController?.hasClients == true ? widget.scrollController!.offset : 0.0;
@@ -264,7 +299,7 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
            targetChildRect = childRectInViewport.shift(Offset(0, offset));
         }
         
-        if (targetTestRect.overlaps(targetChildRect)) {
+        if (rect.overlaps(targetChildRect)) {
           indices.add(child.index.offset);
         }
       } else {
@@ -281,7 +316,18 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
 
     final local = box.globalToLocal(globalPosition);
     
-    // 优先使用 LayoutMap 进行精确匹配（特别是桌面端）
+    // 优化：优先使用 Flutter 原生的 Render Tree Hit Test (O(log N))
+    // 对于已经显示在屏幕上的项，这是最快、最准确的方式
+    final hitTestResult = BoxHitTestResult();
+    if (box.hitTest(hitTestResult, position: local)) {
+      for (final hit in hitTestResult.path) {
+        if (hit.target is PhotoGridItemIndexProxy) {
+          return (hit.target as PhotoGridItemIndexProxy).index;
+        }
+      }
+    }
+
+    // 备选方案：只有 Hit Test 没中时（可能点击了 item 间隙但 layoutMap 认为在范围内，或者坐标偏移），才检查 LayoutMap
     if (widget.itemLayoutMap != null && widget.itemLayoutMap!.isNotEmpty) {
       final scrollOffset = widget.scrollController?.hasClients == true ? widget.scrollController!.offset : 0.0;
       final logicPos = Offset(local.dx, local.dy + scrollOffset);
@@ -295,15 +341,6 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
       }
     }
 
-    // 备选方案：Render Tree Hit Test (用于处理动态项或 LayoutMap 未就绪时)
-    final hitTestResult = BoxHitTestResult();
-    if (!box.hitTest(hitTestResult, position: local)) return null;
-
-    for (final hit in hitTestResult.path) {
-      if (hit.target is PhotoGridItemIndexProxy) {
-        return (hit.target as PhotoGridItemIndexProxy).index;
-      }
-    }
     return null;
   }
 
@@ -424,11 +461,7 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
 
   @override
   Widget build(BuildContext context) {
-    // 计算当前显示在 UI 上的选框位置
-    Rect? visualRect;
-    if (_selectionStartLocal != null && _selectionEndLocal != null) {
-      visualRect = Rect.fromPoints(_selectionStartLocal!, _selectionEndLocal!);
-    }
+    final themeColor = Theme.of(context).primaryColor;
 
     return Focus(
       focusNode: _focusNode,
@@ -442,17 +475,23 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
               onPointerDown: _handlePointerDown,
               onPointerMove: _handlePointerMove,
               onPointerUp: _handlePointerUp,
-              behavior: HitTestBehavior.translucent, // 确保点击空白处也能触发
+              behavior: HitTestBehavior.translucent, 
               child: widget.child,
             ),
-            if (_isSelecting && visualRect != null)
-              IgnorePointer(
-                child: CustomPaint(
-                  painter: widget.selectionBoxPainterBuilder?.call(visualRect, Theme.of(context).primaryColor) ??
-                      _SelectionPainter(visualRect, Theme.of(context).primaryColor),
-                  size: Size.infinite,
-                ),
-              ),
+            // 使用 ValueListenableBuilder 局部刷新选框，避免重建整个 grid 子树
+            ValueListenableBuilder<Rect?>(
+              valueListenable: _selectionRectNotifier,
+              builder: (context, rect, _) {
+                if (!_isSelecting || rect == null) return const SizedBox.shrink();
+                return IgnorePointer(
+                  child: CustomPaint(
+                    painter: widget.selectionBoxPainterBuilder?.call(rect, themeColor) ??
+                        _SelectionPainter(rect, themeColor),
+                    size: Size.infinite,
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
