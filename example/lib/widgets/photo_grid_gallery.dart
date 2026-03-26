@@ -15,7 +15,11 @@ class PhotoGridGallery extends StatefulWidget {
   final GroupPhotoBy groupBy;
   final bool showScrubber;
   final void Function(PhotoGridItem)? onTap;
+  final void Function(PhotoGridItem)? onDoubleTap;
+  final void Function(PhotoGridItem)? onLongPress;
+  final void Function(PhotoGridItem item, Offset position)? onSecondaryTap;
   final List<Widget>? topSlivers;
+  final List<Widget>? endSlivers;
   final ScrubberLabelBuilder? scrubberLabelBuilder;
   final ScrubberThumbBuilder? scrubberThumbBuilder;
   final ScrubberSegmentBuilder? scrubberSegmentBuilder;
@@ -55,7 +59,11 @@ class PhotoGridGallery extends StatefulWidget {
     this.groupBy = GroupPhotoBy.month,
     this.showScrubber = true,
     this.onTap,
+    this.onDoubleTap,
+    this.onLongPress,
+    this.onSecondaryTap,
     this.topSlivers,
+    this.endSlivers,
     this.scrubberLabelBuilder,
     this.scrubberThumbBuilder,
     this.scrubberSegmentBuilder,
@@ -97,7 +105,11 @@ class PhotoGridGallery extends StatefulWidget {
     bool showScrubber = true,
     PhotoSelectionController? selectionController,
     void Function(PhotoGridItem)? onTap,
+    void Function(PhotoGridItem)? onDoubleTap,
+    void Function(PhotoGridItem)? onLongPress,
+    void Function(PhotoGridItem item, Offset position)? onSecondaryTap,
     List<Widget>? topSlivers,
+    List<Widget>? endSlivers,
     required PhotoGridItemBuilder itemBuilder,
     PhotoGridHeaderBuilder? headerBuilder,
     // Scrubber 配置
@@ -138,7 +150,11 @@ class PhotoGridGallery extends StatefulWidget {
     showScrubber: showScrubber,
     selectionController: selectionController,
     onTap: onTap,
+    onDoubleTap: onDoubleTap,
+    onLongPress: onLongPress,
+    onSecondaryTap: onSecondaryTap,
     topSlivers: topSlivers,
+    endSlivers: endSlivers,
     itemBuilder: itemBuilder,
     headerBuilder: headerBuilder,
     scrubberLabelBuilder: scrubberLabelBuilder,
@@ -179,7 +195,11 @@ class PhotoGridGallery extends StatefulWidget {
     bool showScrubber = true,
     PhotoSelectionController? selectionController,
     void Function(PhotoGridItem)? onTap,
+    void Function(PhotoGridItem)? onDoubleTap,
+    void Function(PhotoGridItem)? onLongPress,
+    void Function(PhotoGridItem item, Offset position)? onSecondaryTap,
     List<Widget>? topSlivers,
+    List<Widget>? endSlivers,
     required PhotoGridItemBuilder itemBuilder,
     PhotoGridHeaderBuilder? headerBuilder,
     // Scrubber 配置
@@ -220,7 +240,11 @@ class PhotoGridGallery extends StatefulWidget {
     showScrubber: showScrubber,
     selectionController: selectionController,
     onTap: onTap,
+    onDoubleTap: onDoubleTap,
+    onLongPress: onLongPress,
+    onSecondaryTap: onSecondaryTap,
     topSlivers: topSlivers,
+    endSlivers: endSlivers,
     itemBuilder: itemBuilder,
     headerBuilder: headerBuilder,
     scrubberLabelBuilder: scrubberLabelBuilder,
@@ -346,11 +370,16 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
           onSegmentsChanged: _onSegmentsChanged,
           onLayoutInfoChanged: _onLayoutInfoChanged,
           onTap: widget.onTap,
+          onDoubleTap: widget.onDoubleTap,
+          onLongPress: widget.onLongPress,
+          onSecondaryTap: widget.onSecondaryTap,
           topSlivers: widget.topSlivers,
+          endSlivers: widget.endSlivers,
           itemBuilder: widget.itemBuilder,
           headerBuilder: widget.headerBuilder,
           headerExtentCalculator: widget.headerExtentCalculator,
           enableGrouping: widget.enableGrouping,
+          disableInternalSelectionToggle: widget.selectionController != null,
         );
 
         // 包装拖拽选择区域

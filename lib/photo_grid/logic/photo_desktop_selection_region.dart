@@ -109,24 +109,41 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
     final isControlPressed = HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.controlLeft) ||
                              HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.metaLeft) ||
                              HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.controlRight);
+    
+    final bool isRightClick = event.buttons == kSecondaryButton;
 
     final hitIndex = _getIndexAtPosition(event.position);
+    final isHeader = _isHeaderAtPosition(event.position);
 
     if (hitIndex != null) {
       final index = hitIndex.offset;
+      widget.selectionController.setAnchorIndex(index);
+
+      if (isRightClick) {
+        // 右键点击项：如果项未选中，则选中它（并清空其他，符合 macOS Finder 逻辑）
+        // 如果项已选中，则保持现状（用于显示针对多项的 Context Menu）
+        if (!widget.selectionController.selectedIds.contains(widget.allItemIds[index])) {
+          widget.selectionController.selectOnly(widget.allItemIds[index], index: index);
+        }
+        return; // 右键不触发框选
+      }
+
       if (isShiftPressed) {
+        // Shift 连选：锚点来自上一步的点选。如果没有锚点，以当前位置为锚点。
         final anchor = widget.selectionController.selectionAnchorIndex ?? index;
         widget.selectionController.selectRange(anchor, index, widget.allItemIds, additive: isControlPressed);
       } else if (isControlPressed) {
         widget.selectionController.toggleItem(widget.allItemIds[index], index: index);
+        // Ctrl/Cmd 点选：更新锚点为当前点击位置
+        widget.selectionController.setAnchorIndex(index);
       } else {
-         // 点击 Item 且没有修饰键：清除旧的，选中当前的
-         widget.selectionController.clearSelection();
-         widget.selectionController.selectItem(widget.allItemIds[index], index: index);
-         widget.selectionController.setSelectionActive(true);
+        // 普通左键单击（不带修饰键）：直接执行选中，不等待 onTap 的 300ms 延迟
+        // 这使得在开启 onDoubleTap 的情况下，选中反馈依然是瞬时的
+        widget.selectionController.selectOnly(widget.allItemIds[index], index: index);
       }
-      widget.selectionController.setFocusedIndex(index);
     } else {
+      if (isRightClick) return; // 右键点击空白处不执行任何操作
+
       // 点击空白处开始框选
       final scrollOffset = widget.scrollController?.hasClients == true ? widget.scrollController!.offset : 0.0;
       
@@ -134,13 +151,12 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
       _logicStart = Offset(event.localPosition.dx, event.localPosition.dy + scrollOffset);
       _isSelecting = true;
 
-      // 如果没有按修饰键，清除已有选中
-      if (!isControlPressed && !isShiftPressed) {
+      // 如果点击的是 Header 或者是按下了修饰键，不要清除已有选中
+      if (!isControlPressed && !isShiftPressed && !isHeader) {
         widget.selectionController.clearSelection();
       }
       // 记录当前已选，用于框选时的增量计算 (macOS 风格：框选通常是替换或反选，但我们做简单的增量/替换)
-      widget.selectionController.startDragSelection(widget.allItemIds.firstOrNull ?? ""); 
-      // 实际上我们直接用 updateDragSelection，这里只是为了触发 active
+      widget.selectionController.startDragSelection(null); 
     }
   }
 
@@ -265,8 +281,24 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
     final box = context.findRenderObject() as RenderBox?;
     if (box == null) return null;
 
-    final hitTestResult = BoxHitTestResult();
     final local = box.globalToLocal(globalPosition);
+    
+    // 优先使用 LayoutMap 进行精确匹配（特别是桌面端）
+    if (widget.itemLayoutMap != null && widget.itemLayoutMap!.isNotEmpty) {
+      final scrollOffset = widget.scrollController?.hasClients == true ? widget.scrollController!.offset : 0.0;
+      final logicPos = Offset(local.dx, local.dy + scrollOffset);
+      
+      for (final entry in widget.itemLayoutMap!.entries) {
+        if (entry.value.contains(logicPos)) {
+          final id = entry.key;
+          final idx = widget.allItemIds.indexOf(id);
+          if (idx != -1) return PhotoGridItemIndex(idx);
+        }
+      }
+    }
+
+    // 备选方案：Render Tree Hit Test (用于处理动态项或 LayoutMap 未就绪时)
+    final hitTestResult = BoxHitTestResult();
     if (!box.hitTest(hitTestResult, position: local)) return null;
 
     for (final hit in hitTestResult.path) {
@@ -277,10 +309,26 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
     return null;
   }
 
+  bool _isHeaderAtPosition(Offset globalPosition) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return false;
+
+    final hitTestResult = BoxHitTestResult();
+    final local = box.globalToLocal(globalPosition);
+    if (!box.hitTest(hitTestResult, position: local)) return false;
+
+    for (final hit in hitTestResult.path) {
+      if (hit.target is PhotoGridHeaderProxy) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
 
-    final currentFocus = widget.selectionController.focusedIndex ?? -1;
+    final currentFocus = widget.selectionController.selectionAnchorIndex ?? -1;
     final totalCount = widget.allItemIds.length;
     if (totalCount == 0) return KeyEventResult.ignored;
 
@@ -320,7 +368,6 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
     }
 
     if (nextFocus != currentFocus && nextFocus >= 0) {
-      widget.selectionController.setFocusedIndex(nextFocus);
       if (isShiftPressed) {
         final anchor = widget.selectionController.selectionAnchorIndex ?? currentFocus;
         widget.selectionController.selectRange(anchor, nextFocus, widget.allItemIds, additive: isControlPressed);
@@ -427,7 +474,6 @@ class _PhotoDesktopSelectionRegionState extends State<PhotoDesktopSelectionRegio
         widget.selectionController.setSelectionActive(true);
       }
       widget.selectionController.selectItem(itemId, index: index);
-      widget.selectionController.setFocusedIndex(index);
     }
   }
 }

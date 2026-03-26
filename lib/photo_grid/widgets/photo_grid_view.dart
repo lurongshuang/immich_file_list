@@ -13,7 +13,6 @@ typedef PhotoGridItemBuilder = Widget Function(
   BuildContext context,
   PhotoGridItem item,
   bool isSelected,
-  bool isFocused,
   bool selectionActive,
 );
 typedef PhotoGridHeaderBuilder = Widget Function(
@@ -83,16 +82,31 @@ class PhotoGridView extends StatefulWidget {
   /// 项点击回调
   final void Function(PhotoGridItem item)? onTap;
 
+  /// 项双击回调
+  final void Function(PhotoGridItem item)? onDoubleTap;
+
+  /// 项长按回调
+  final void Function(PhotoGridItem item)? onLongPress;
+
+  /// 项辅助按钮点击（右键）回调，用于触发上下文菜单。
+  final void Function(PhotoGridItem item, Offset position)? onSecondaryTap;
+
   /// 额外的顶部 Sliver 列表，直接传入 CustomScrollView 以支持独立的吸顶/偏移逻辑。
   final List<Widget>? topSlivers;
+
+  /// 额外的底部 Sliver 列表，追加在 [SliverSegmentedList] 之后。
+  /// 可用于实现类似 "到底了" 提示、加载更多、底部留白等场景。
+  final List<Widget>? endSlivers;
 
   /// 当内部布局信息（如每个项的 Rect）发生变化时触发的回调。
   /// 通常用于外部组件需要知道内部项的精确位置信息时。
   final void Function(Map<String, Rect>)? onLayoutInfoChanged;
 
+  /// 是否禁用内置的点击切换选中逻辑。
+  /// 在桌面端使用 PhotoDesktopSelectionRegion 时，通常需要禁用此项以避免交互冲突。
+  final bool disableInternalSelectionToggle;
+
   /// 自定义 Header 高度的回调函数。
-  /// 参数是 [HeaderType]，返回值为 header 的高度。
-  /// 如果不提供，则使用内置的默认高度计算逻辑（按 HeaderType 硬编码）。
   final double Function(HeaderType)? headerExtentCalculator;
 
   const PhotoGridView({
@@ -110,10 +124,15 @@ class PhotoGridView extends StatefulWidget {
     this.onSegmentsChanged,
     this.onRefresh,
     this.onTap,
+    this.onDoubleTap,
+    this.onLongPress,
+    this.onSecondaryTap,
     this.topSlivers,
+    this.endSlivers,
     this.onLayoutInfoChanged,
     this.headerBuilder,
     this.headerExtentCalculator,
+    this.disableInternalSelectionToggle = false,
     required this.itemBuilder,
   });
 
@@ -132,11 +151,15 @@ class PhotoGridView extends StatefulWidget {
     void Function(List<Segment>)? onSegmentsChanged,
     Future<void> Function()? onRefresh,
     void Function(PhotoGridItem)? onTap,
+    void Function(PhotoGridItem)? onDoubleTap,
+    void Function(PhotoGridItem)? onLongPress,
     List<Widget>? topSlivers,
+    List<Widget>? endSlivers,
     void Function(Map<String, Rect>)? onLayoutInfoChanged,
     PhotoGridHeaderBuilder? headerBuilder,
     double Function(HeaderType)? headerExtentCalculator,
     bool enableGrouping = true,
+    bool disableInternalSelectionToggle = false,
     required PhotoGridItemBuilder itemBuilder,
   }) => PhotoGridView(
     key: key,
@@ -153,10 +176,14 @@ class PhotoGridView extends StatefulWidget {
     onSegmentsChanged: onSegmentsChanged,
     onRefresh: onRefresh,
     onTap: onTap,
+    onDoubleTap: onDoubleTap,
+    onLongPress: onLongPress,
     topSlivers: topSlivers,
+    endSlivers: endSlivers,
     onLayoutInfoChanged: onLayoutInfoChanged,
     headerBuilder: headerBuilder,
     headerExtentCalculator: headerExtentCalculator,
+    disableInternalSelectionToggle: disableInternalSelectionToggle,
     itemBuilder: itemBuilder,
   );
 
@@ -173,11 +200,15 @@ class PhotoGridView extends StatefulWidget {
     void Function(List<Segment>)? onSegmentsChanged,
     Future<void> Function()? onRefresh,
     void Function(PhotoGridItem)? onTap,
+    void Function(PhotoGridItem)? onDoubleTap,
+    void Function(PhotoGridItem)? onLongPress,
     List<Widget>? topSlivers,
+    List<Widget>? endSlivers,
     void Function(Map<String, Rect>)? onLayoutInfoChanged,
     PhotoGridHeaderBuilder? headerBuilder,
     double Function(HeaderType)? headerExtentCalculator,
     bool enableGrouping = true,
+    bool disableInternalSelectionToggle = false,
     required PhotoGridItemBuilder itemBuilder,
   }) => PhotoGridView(
     key: key,
@@ -194,10 +225,14 @@ class PhotoGridView extends StatefulWidget {
     onSegmentsChanged: onSegmentsChanged,
     onRefresh: onRefresh,
     onTap: onTap,
+    onDoubleTap: onDoubleTap,
+    onLongPress: onLongPress,
     topSlivers: topSlivers,
+    endSlivers: endSlivers,
     onLayoutInfoChanged: onLayoutInfoChanged,
     headerBuilder: headerBuilder,
     headerExtentCalculator: headerExtentCalculator,
+    disableInternalSelectionToggle: disableInternalSelectionToggle,
     itemBuilder: itemBuilder,
   );
 
@@ -346,49 +381,51 @@ class _PhotoGridViewState extends State<PhotoGridView> {
           .map((e) => e.id)
           .toList();
 
-      return SizedBox(
-        height: height,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w500,
+      return PhotoGridHeaderWrapper(
+        child: SizedBox(
+          height: height,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              if (widget.selectionController?.isSelectionActive == true && bucket.assetCount > 0)
-                AnimatedBuilder(
-                  animation: widget.selectionController!,
-                  builder: (context, _) {
-                    final allSelected = sectionIds.every((id) => widget.selectionController!.selectedIds.contains(id));
-                    return GestureDetector(
-                      onTap: () {
-                        if (allSelected) {
-                          for (final id in sectionIds) {
-                            widget.selectionController!.selectedIds.remove(id);
+                if (widget.selectionController?.isSelectionActive == true && bucket.assetCount > 0)
+                  AnimatedBuilder(
+                    animation: widget.selectionController!,
+                    builder: (context, _) {
+                      final allSelected = sectionIds.every((id) => widget.selectionController!.selectedIds.contains(id));
+                      return GestureDetector(
+                        onTap: () {
+                          if (allSelected) {
+                            for (final id in sectionIds) {
+                              widget.selectionController!.selectedIds.remove(id);
+                            }
+                          } else {
+                            widget.selectionController!.selectAll(sectionIds);
                           }
-                        } else {
-                          widget.selectionController!.selectAll(sectionIds);
-                        }
-                        // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
-                        widget.selectionController!.notifyListeners();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 6.0),
-                        child: Icon(
-                          allSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                          color: allSelected ? Theme.of(context).primaryColor : Colors.grey,
+                          // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+                          widget.selectionController!.notifyListeners();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 6.0),
+                          child: Icon(
+                            allSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                            color: allSelected ? Theme.of(context).primaryColor : Colors.grey,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-            ],
+                      );
+                    },
+                  ),
+              ],
+            ),
           ),
         ),
       );
@@ -426,6 +463,10 @@ class _PhotoGridViewState extends State<PhotoGridView> {
       crossAxisCount: crossAxisCount,
       selectionController: widget.selectionController,
       onTap: widget.onTap,
+      onDoubleTap: widget.onDoubleTap,
+      onLongPress: widget.onLongPress,
+      onSecondaryTap: widget.onSecondaryTap,
+      disableInternalSelectionToggle: widget.disableInternalSelectionToggle,
       itemBuilder: widget.itemBuilder,
     );
   }
@@ -545,6 +586,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
                       : 0,
                 ),
               ),
+              if (widget.endSlivers != null) ...widget.endSlivers!,
             ],
           ),
         );
@@ -607,6 +649,10 @@ class _AssetRow extends StatelessWidget {
   final int crossAxisCount;
   final PhotoSelectionController? selectionController;
   final void Function(PhotoGridItem)? onTap;
+  final void Function(PhotoGridItem)? onDoubleTap;
+  final void Function(PhotoGridItem)? onLongPress;
+  final void Function(PhotoGridItem item, Offset position)? onSecondaryTap;
+  final bool disableInternalSelectionToggle;
   final PhotoGridItemBuilder itemBuilder;
 
   const _AssetRow({
@@ -619,6 +665,10 @@ class _AssetRow extends StatelessWidget {
     required this.crossAxisCount,
     this.selectionController,
     this.onTap,
+    this.onDoubleTap,
+    this.onLongPress,
+    this.onSecondaryTap,
+    required this.disableInternalSelectionToggle,
     required this.itemBuilder,
   });
 
@@ -699,21 +749,22 @@ class _AssetRow extends StatelessWidget {
   Widget _buildItemContent(BuildContext context, PhotoGridItem item, int absoluteOffset) {
     final bool selectionActive = selectionController?.isSelectionActive ?? false;
     final bool isSelected = selectionController?.selectedIds.contains(item.id) ?? false;
-    final bool isFocused = selectionController?.focusedIndex == absoluteOffset;
 
     return GestureDetector(
       onTap: () {
-        if (selectionActive) {
+        if (selectionActive && !disableInternalSelectionToggle) {
           selectionController!.toggleItem(item.id, index: absoluteOffset);
         } else {
           onTap?.call(item);
         }
       },
+      onDoubleTap: onDoubleTap != null ? () => onDoubleTap!.call(item) : null,
+      onLongPress: onLongPress != null ? () => onLongPress!.call(item) : null,
+      onSecondaryTapUp: onSecondaryTap != null ? (details) => onSecondaryTap!.call(item, details.globalPosition) : null,
       child: itemBuilder(
         context,
         item,
         isSelected,
-        isFocused,
         selectionActive,
       ),
     );

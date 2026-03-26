@@ -16,24 +16,23 @@ class PhotoSelectionController extends ChangeNotifier {
   /// 当前是否处于多选激活模式。
   bool get isSelectionActive => _isSelectionActive;
 
-  /// 当前处于焦点（Focus ring）状态的项目角标。用于键盘导航。
-  int? _focusedIndex;
-  int? get focusedIndex => _focusedIndex;
-
-  /// 上一次用户手动点击（非拖拽）选中的项目角标。作为 Shift 连选的基点锚点。
+  /// 上一次用户手动点击（非拖拽）选中的项目角标。作为 Shift 连选的基点锚点以及键盘导航起点。
   int? _selectionAnchorIndex;
   int? get selectionAnchorIndex => _selectionAnchorIndex;
 
   bool _isDragSelecting = true;
   Set<String> _baseSelectedIds = {};
-
-  /// 更新焦点角标。
-  void setFocusedIndex(int? index) {
-    if (_focusedIndex != index) {
-      _focusedIndex = index;
+  
+  /// 设置或更新选择的锚点（基点）。
+  void setAnchorIndex(int? index) {
+    if (_selectionAnchorIndex != index) {
+      _selectionAnchorIndex = index;
       notifyListeners();
     }
   }
+
+  // 用于解决 PointerDown 和 Tap 重复触发导致的双重 Toggle 问题。
+  int _lastTick = 0;
 
   /// 明确开启或关闭多选模式。
   void setSelectionActive(bool active) {
@@ -43,6 +42,7 @@ class PhotoSelectionController extends ChangeNotifier {
         _selectedIds.clear();
         _selectionAnchorIndex = null;
       }
+      _lastTick = DateTime.now().millisecondsSinceEpoch;
       notifyListeners();
     }
   }
@@ -50,19 +50,35 @@ class PhotoSelectionController extends ChangeNotifier {
   /// 翻转单张照片的选择状态。
   /// [index] 可选，用于更新锚点位置。
   void toggleItem(String id, {int? index}) {
+    // 如果刚刚在同一毫秒或极短时间内处理过（例如 PointerDown 已选中），本次 Tap 忽略
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastTick < 50) return; 
+
     if (_selectedIds.contains(id)) {
       _selectedIds.remove(id);
     } else {
       _selectedIds.add(id);
       if (index != null) _selectionAnchorIndex = index;
     }
+    _lastTick = now;
     notifyListeners();
   }
 
-  /// 选中单张照片。
+  /// 强制选中某张照片。
   void selectItem(String id, {int? index}) {
     _selectedIds.add(id);
     if (index != null) _selectionAnchorIndex = index;
+    _lastTick = DateTime.now().millisecondsSinceEpoch;
+    notifyListeners();
+  }
+
+  /// 仅选中当前单项，清空其他所有选中。
+  void selectOnly(String id, {int? index}) {
+    _selectedIds.clear();
+    _selectedIds.add(id);
+    if (index != null) _selectionAnchorIndex = index;
+    _isSelectionActive = true;
+    _lastTick = DateTime.now().millisecondsSinceEpoch;
     notifyListeners();
   }
 
@@ -80,21 +96,26 @@ class PhotoSelectionController extends ChangeNotifier {
         _selectedIds.add(allIds[i]);
       }
     }
+    _lastTick = DateTime.now().millisecondsSinceEpoch;
     notifyListeners();
   }
 
   /// 拖拽框选开始。
-  void startDragSelection(String anchorId) {
+  void startDragSelection(String? anchorId) {
     if (!_isSelectionActive) {
       _isSelectionActive = true;
     }
     _baseSelectedIds = Set.from(_selectedIds);
-    _isDragSelecting = !_selectedIds.contains(anchorId);
 
-    if (_isDragSelecting) {
-      _selectedIds.add(anchorId);
+    if (anchorId == null || anchorId.isEmpty) {
+      _isDragSelecting = true;
     } else {
-      _selectedIds.remove(anchorId);
+      _isDragSelecting = !_selectedIds.contains(anchorId);
+      if (_isDragSelecting) {
+        _selectedIds.add(anchorId);
+      } else {
+        _selectedIds.remove(anchorId);
+      }
     }
     notifyListeners();
   }
@@ -120,6 +141,7 @@ class PhotoSelectionController extends ChangeNotifier {
   /// 批量全选列表图片
   void selectAll(List<String> allIds) {
     _selectedIds.addAll(allIds);
+    _lastTick = DateTime.now().millisecondsSinceEpoch;
     notifyListeners();
   }
 
@@ -127,6 +149,7 @@ class PhotoSelectionController extends ChangeNotifier {
   void clearSelection() {
     _selectedIds.clear();
     _selectionAnchorIndex = null;
+    _lastTick = DateTime.now().millisecondsSinceEpoch;
     notifyListeners();
   }
 }

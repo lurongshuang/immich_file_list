@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:immich_file_list/photo_grid/photo_grid.dart';
 import '../dummy_data.dart';
 
@@ -83,11 +84,84 @@ class _ExamplePageWrapperState extends State<ExamplePageWrapper> {
   }
 }
 
-// 通用点击事件包装器，区分多选还是正常查看大图
+// 通用点击事件包装器：实现单选/首选逻辑（符合普通桌面端文件管理器体验）
 void handleTap(BuildContext context, PhotoGridItem item, PhotoSelectionController controller) {
-  if (controller.isSelectionActive) {
-    controller.toggleItem(item.id);
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('查看大图: ${item.id} (长按可进入多选)')));
+  final bool hasModifier = HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.shiftLeft) ||
+                           HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.shiftRight) ||
+                           HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.controlLeft) ||
+                           HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.controlRight) ||
+                           HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.metaLeft) ||
+                           HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.metaRight);
+
+  // 如果有修饰键，说明 PhotoDesktopSelectionRegion 的 PointerDown 已经处理过增量/范围选择了。
+  // 我们这里直接跳过，避免 onTap 的 selectOnly 覆盖掉它。
+  if (hasModifier) return;
+
+  // 单击时仅选中当前项（并清空其他已有选中）
+  controller.selectOnly(item.id);
+}
+
+// 通用双击事件包装器
+// 注意：启用此回调会导致 GestureDetector 的 onTap 产生约 300ms 的识别延迟。
+// 如果追求极致的单击响应速度，请不要在 PhotoGridGallery 中传入 onDoubleTap 参数。
+void handleDoubleTap(BuildContext context, PhotoGridItem item, PhotoSelectionController controller) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text('🚀 双击触发（已知局限：会导致单击识别延迟 300ms）: ${item.id}'),
+    duration: const Duration(seconds: 1),
+    behavior: SnackBarBehavior.floating,
+  ));
+}
+
+void handleLongPress(BuildContext context, PhotoGridItem item, PhotoSelectionController controller) {
+  if (!controller.isSelectionActive) {
+    controller.setSelectionActive(true);
   }
+  controller.selectItem(item.id);
+}
+
+// 通用右键点击事件包装器：触发上下文菜单
+void handleSecondaryTap(BuildContext context, PhotoGridItem item, Offset position) {
+  final RenderBox? overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
+  if (overlay == null) return;
+  
+  showMenu(
+    context: context,
+    position: RelativeRect.fromRect(
+      position & const Size(1, 1),
+      Offset.zero & overlay.size,
+    ),
+    items: <PopupMenuEntry>[
+      PopupMenuItem(
+        child: const Row(
+          children: [
+            Icon(Icons.info_outline, size: 20),
+            SizedBox(width: 8),
+            Text('查看详情'),
+          ],
+        ),
+        onTap: () => print('查看 ${item.id} 详情'),
+      ),
+      PopupMenuItem(
+        child: const Row(
+          children: [
+            Icon(Icons.copy, size: 20),
+            SizedBox(width: 8),
+            Text('复制 ID'),
+          ],
+        ),
+        onTap: () => print('复制 ${item.id} ID'),
+      ),
+      const PopupMenuDivider(),
+      PopupMenuItem(
+        child: const Row(
+          children: [
+            Icon(Icons.delete_outline, color: Colors.red, size: 20),
+            SizedBox(width: 8),
+            Text('删除', style: TextStyle(color: Colors.red)),
+          ],
+        ),
+        onTap: () => print('删除 ${item.id}'),
+      ),
+    ],
+  );
 }

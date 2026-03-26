@@ -78,9 +78,10 @@ class _DesktopMacOSExampleState extends State<DesktopMacOSExample> {
                 groupBy: GroupPhotoBy.month,
                 showScrubber: true,
                 selectionController: controller,
-                onTap: (item) {
-                  handleTap(context, item, controller);
-                },
+                onTap: (item) => handleTap(context, item, controller),
+                onDoubleTap: (item) => handleDoubleTap(context, item, controller),
+                onLongPress: (item) => handleLongPress(context, item, controller),
+                onSecondaryTap: (item, pos) => handleSecondaryTap(context, item, pos),
                 // 自定义滑块样式：现代简约圆形
                 scrubberThumbBuilder: (context, offset, isDragging) {
                   return AnimatedContainer(

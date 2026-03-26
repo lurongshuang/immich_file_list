@@ -270,3 +270,18 @@ class PhotoGridItemIndexProxy extends RenderProxyBox {
 
   PhotoGridItemIndexProxy({required this.index});
 }
+
+/// 用于标识 Header 的 Proxy，帮助 SelectionRegion 区分空白区域和 Header 区域。
+class PhotoGridHeaderWrapper extends SingleChildRenderObjectWidget {
+  const PhotoGridHeaderWrapper({
+    required Widget super.child,
+    super.key,
+  });
+
+  @override
+  PhotoGridHeaderProxy createRenderObject(BuildContext context) {
+    return PhotoGridHeaderProxy();
+  }
+}
+
+class PhotoGridHeaderProxy extends RenderProxyBox {}

@@ -55,19 +55,13 @@ class _ScrubberToggleExampleState extends State<ScrubberToggleExample> {
         showScrubberPrompt: _showPrompt,
         showScrubberRuler: _showRuler,
         onTap: (item) => print('Tap: ${item.id}'),
-        itemBuilder: (context, item, isSelected, isFocused, selectionActive) => Stack(
+        itemBuilder: (context, item, isSelected, selectionActive) => Stack(
           fit: StackFit.expand,
           children: [
             Container(
               color: isSelected ? Colors.blue.withAlpha(50) : Colors.grey.shade300,
               child: Center(child: Text(item.id.substring(0, 4), style: const TextStyle(fontSize: 10))),
             ),
-            if (isFocused)
-               Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).primaryColor, width: 2.0),
-                ),
-              ),
           ],
         ),
       ),

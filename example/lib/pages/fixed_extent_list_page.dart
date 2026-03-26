@@ -19,12 +19,11 @@ class FixedExtentExample extends StatelessWidget {
         crossAxisSpacing: 0.0,
         groupBy: GroupPhotoBy.day,
         showScrubber: true,
-        itemBuilder: (context, item, isSelected, isFocused, selectionActive) {
+        itemBuilder: (context, item, isSelected, selectionActive) {
           final dummy = item as DummyPhotoItem;
           return _FileListTile(
             item: dummy,
             isSelected: isSelected,
-            isFocused: isFocused,
             selectionActive: selectionActive,
           );
         },
@@ -36,13 +35,11 @@ class FixedExtentExample extends StatelessWidget {
 class _FileListTile extends StatelessWidget {
   final DummyPhotoItem item;
   final bool isSelected;
-  final bool isFocused;
   final bool selectionActive;
 
   const _FileListTile({
     required this.item,
     this.isSelected = false,
-    this.isFocused = false,
     this.selectionActive = false,
   });
 
@@ -132,16 +129,8 @@ class _FileListTile extends StatelessWidget {
           IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
       ),
-      if (isFocused)
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).primaryColor, width: 2.0),
-            ),
-          ),
-        ),
-      ],
-    ),
-    );
-  }
+    ],
+  ),
+);
+}
 }

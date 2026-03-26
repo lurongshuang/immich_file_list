@@ -25,7 +25,6 @@ Widget buildDummyThumbnail(
   BuildContext context,
   PhotoGridItem item,
   bool isSelected,
-  bool isFocused,
   bool selectionActive,
 ) {
   if (item is! DummyPhotoItem) return const SizedBox();
@@ -42,9 +41,10 @@ Widget buildDummyThumbnail(
               child: Text(
                 item.id,
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             if (item.title.isNotEmpty)
@@ -54,17 +54,21 @@ Widget buildDummyThumbnail(
                 child: Text(
                   item.title,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      backgroundColor: Colors.black45),
+                    color: Colors.white,
+                    fontSize: 10,
+                    backgroundColor: Colors.black45,
+                  ),
                 ),
               ),
             if (item.isVideo)
               const Positioned(
                 top: 4,
                 right: 4,
-                child:
-                    Icon(Icons.play_circle_outline, color: Colors.white, size: 16),
+                child: Icon(
+                  Icons.play_circle_outline,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
           ],
         ),
@@ -79,22 +83,14 @@ Widget buildDummyThumbnail(
           padding: const EdgeInsets.all(4.0),
           child: selectionActive
               ? Icon(
-                  isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                  isSelected
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
                   color: isSelected
                       ? Theme.of(context).primaryColor
                       : Colors.white70,
                 )
               : null,
-        ),
-      // 业务层定义的焦点环 (macOS 风格)
-      if (isFocused)
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: Theme.of(context).primaryColor,
-              width: 3.0,
-            ),
-          ),
         ),
     ],
   );
@@ -102,7 +98,11 @@ Widget buildDummyThumbnail(
 
 class DummyDataFactory {
   /// Generates dummy photo items covering the specified number of months.
-  static List<DummyPhotoItem> generateDummyData(int months, int count, {bool mixedTypes = false}) {
+  static List<DummyPhotoItem> generateDummyData(
+    int months,
+    int count, {
+    bool mixedTypes = false,
+  }) {
     final random = Random(42);
     final List<DummyPhotoItem> generated = [];
     final now = DateTime.now();
