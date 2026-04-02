@@ -164,6 +164,7 @@ class _PhotoDragRegionState extends State<PhotoDragRegion> with SingleTickerProv
 
     final initialHit = _getIndexAtPosition(event.globalPosition);
     anchorAsset = initialHit;
+    debugPrint('PhotoDragRegion: _onLongPressStart at ${event.globalPosition}, asset index: ${initialHit?.offset}');
     if (initialHit == null) return;
 
     if (anchorAsset != null) {
@@ -174,6 +175,7 @@ class _PhotoDragRegionState extends State<PhotoDragRegion> with SingleTickerProv
   Offset? _lastGlobalPosition;
 
   void _onLongPressEnd() {
+    debugPrint('PhotoDragRegion: _onLongPressEnd');
     _lastGlobalPosition = null;
     scrollNotified = false;
     _velocity = 0;
@@ -237,10 +239,6 @@ class _PhotoDragRegionState extends State<PhotoDragRegion> with SingleTickerProv
 }
 
 class _CustomLongPressGestureRecognizer extends LongPressGestureRecognizer {
-  @override
-  void rejectGesture(int pointer) {
-    acceptGesture(pointer);
-  }
 }
 
 class PhotoGridItemIndexWrapper extends SingleChildRenderObjectWidget {

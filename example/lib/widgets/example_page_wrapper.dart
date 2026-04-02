@@ -97,8 +97,16 @@ void handleTap(BuildContext context, PhotoGridItem item, PhotoSelectionControlle
   // 我们这里直接跳过，避免 onTap 的 selectOnly 覆盖掉它。
   if (hasModifier) return;
 
-  // 单击时仅选中当前项（并清空其他已有选中）
-  controller.selectOnly(item.id);
+  final platform = Theme.of(context).platform;
+  final bool isMobile = platform == TargetPlatform.iOS || platform == TargetPlatform.android;
+
+  // 如果处于选择模式且在移动端，则执行 toggle 操作（方便单手取消选中）
+  if (controller.isSelectionActive && isMobile) {
+    controller.toggleItem(item.id);
+  } else {
+    // 在桌面端或未进入选择模式时，执行单选逻辑（清空其他选中，符合访达/标准文件管理器习惯）
+    controller.selectOnly(item.id);
+  }
 }
 
 // 通用双击事件包装器

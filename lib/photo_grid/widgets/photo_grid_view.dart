@@ -695,31 +695,42 @@ class _AssetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final row = Row(
-      children: items.asMap().entries.map((entry) {
-        final index = entry.key;
-        final item = entry.value;
-        final last = index + 1 == crossAxisCount;
-        final offsetIndex = absoluteOffset + index;
+      children: List.generate(crossAxisCount * 2 - 1, (i) {
+        final isSeparator = i.isOdd;
+        if (isSeparator) {
+          return SizedBox(width: crossAxisSpacing);
+        }
 
-        return PhotoGridItemIndexWrapper(
-          offset: offsetIndex,
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: Container(
-              margin: EdgeInsets.only(right: last ? 0.0 : crossAxisSpacing),
-              child: selectionController != null
-                  ? _SelectionObserver(
-                      controller: selectionController!,
-                      itemId: item.id,
-                      builder: (context, isSelected, selectionActive) => 
+        final index = i ~/ 2;
+        final hasItem = index < items.length;
+
+        Widget content;
+        if (hasItem) {
+          final item = items[index];
+          final offsetIndex = absoluteOffset + index;
+
+          content = PhotoGridItemIndexWrapper(
+            offset: offsetIndex,
+            child: selectionController != null
+                ? _SelectionObserver(
+                    controller: selectionController!,
+                    itemId: item.id,
+                    builder: (context, isSelected, selectionActive) =>
                         _buildItemContent(context, item, offsetIndex, isSelected, selectionActive),
-                    )
-                  : _buildItemContent(context, item, offsetIndex, false, false),
-            ),
+                  )
+                : _buildItemContent(context, item, offsetIndex, false, false),
+          );
+        } else {
+          content = const SizedBox.shrink();
+        }
+
+        return Expanded(
+          child: SizedBox(
+            height: height,
+            child: content,
           ),
         );
-      }).toList(),
+      }),
     );
 
     if (showDivider && dividerBuilder != null) {
