@@ -116,7 +116,7 @@ class _FileListTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${item.date.hour}:${item.date.minute} • 2.4 MB • 4032 × 3024',
+                  '${item.date?.hour}:${item.date?.minute} • 2.4 MB • 4032 × 3024',
                   style: TextStyle(
                     color: colorScheme.onSurfaceVariant,
                     fontSize: 13,

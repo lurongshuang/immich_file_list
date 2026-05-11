@@ -48,7 +48,7 @@ class _UICustomizationExampleState extends State<UICustomizationExample> {
             // 1. 自定义桌面端选框样式：橙色描边 + 极低透明度填充
             selectionBoxPainterBuilder: (rect, color) => _CustomSelectionPainter(rect, Colors.orange),
             // 2. 自定义头部：深色雅致风格 + 简单的全选交互逻辑演示
-            headerBuilder: (context, bucket, type, height, assetOffset) {
+            headerBuilder: (context, bucket, type, height, assetOffset, items) {
               final date = (bucket as TimeBucket).date;
               return Container(
                 height: height,

@@ -20,7 +20,7 @@ abstract class PhotoGridItem {
   String get id;
 
   /// 该资源的创建时间或相关时间戳，用于时间轴的聚合分组 (如按月、日分组)
-  DateTime get date;
+  DateTime? get date;
 }
 
 

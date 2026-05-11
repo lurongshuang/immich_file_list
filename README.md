@@ -27,15 +27,15 @@
 
 | 属性 | 类型 | 描述 |
 | :--- | :--- | :--- |
-| `items` | `List<PhotoGridItem>` | **必填**。照片数据源。 |
-| `itemBuilder` | `PhotoGridItemBuilder` | **必填**。单项展现：`(context, item, isSelected, isFocused, selectionActive) => Widget`。 |
-| `headerBuilder` | `PhotoGridHeaderBuilder?` | 可选。自定义分组头部渲染方式。 |
+| `items` | `List<T>` | **必填**。照片数据源。 |
+| `itemBuilder` | `PhotoGridItemBuilder<T>` | **必填**。单项展现：`(context, item, isSelected, selectionActive) => Widget`。 |
+| `headerBuilder` | `PhotoGridHeaderBuilder<T>?` | 可选。自定义分组头部渲染方式：`(context, bucket, type, height, assetOffset, items) => Widget`。 |
 | `crossAxisCount` | `int` | 每行显示的列数（默认 4）。 |
 | `mainAxisSpacing` | `double` | 主轴（垂直）间距（默认 4.0）。 |
 | `crossAxisSpacing` | `double` | 横轴（水平）间距（默认 4.0）。 |
 | `groupBy` | `GroupPhotoBy` | 分组策略：`year`, `month`, `day`, `none`。 |
 | `selectionController` | `PhotoSelectionController?` | 绑定多选状态控制器。 |
-| `onTap` | `Function(PhotoGridItem)?` | 点击项的回调。 |
+| `onTap` | `Function(T)?` | 点击项的回调。 |
 | `topSlivers` | `List<Widget>?` | 在列表顶部插入自定义 Sliver 组件列表。 |
 
 ### 2. PhotoGridScrubber
@@ -87,7 +87,7 @@ import 'package:immich_file_list/immich_file_list.dart';
 // 实现数据接口
 class MyItem implements PhotoGridItem {
   @override final String id;
-  @override final DateTime date;
+  @override final DateTime? date; // 现在支持可选日期
   MyItem(this.id, this.date);
 }
 
@@ -114,20 +114,14 @@ class _PhotoGalleryPageState extends State<PhotoGalleryPage> {
               controller: _scrollController,
               segments: _segments,
               timelineHeight: constraints.maxHeight,
-              child: PhotoGridView(
+              child: PhotoGridView<MyItem>( // 推荐指定泛型
                 items: _items,
                 controller: _scrollController,
                 selectionController: _selectionController,
                 onSegmentsChanged: (s) => setState(() => _segments = s),
-                itemBuilder: (context, item, isSelected, isFocused, selectionActive) => Container(
+                itemBuilder: (context, item, isSelected, selectionActive) => Container(
                    color: isSelected ? Colors.blue.withAlpha(50) : Colors.grey[300],
-                   child: Stack(
-                     children: [
-                       Center(child: Text(item.id)),
-                       if (isFocused)
-                         Container(decoration: BoxDecoration(border: Border.all(color: Colors.blue, width: 2))),
-                     ],
-                   ),
+                   child: Center(child: Text(item.id)),
                 ),
               ),
             );

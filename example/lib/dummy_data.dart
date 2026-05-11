@@ -6,14 +6,14 @@ class DummyPhotoItem implements PhotoGridItem {
   @override
   final String id;
   @override
-  final DateTime date;
+  final DateTime? date;
   final Color color;
   final String title;
   final bool isVideo;
 
   DummyPhotoItem({
     required this.id,
-    required this.date,
+    this.date,
     required this.color,
     this.title = '',
     this.isVideo = false,
@@ -131,7 +131,7 @@ class DummyDataFactory {
       );
     }
 
-    generated.sort((a, b) => b.date.compareTo(a.date));
+    generated.sort((a, b) => (b.date ?? DateTime.now()).compareTo(a.date ?? DateTime.now()));
     return generated;
   }
 }

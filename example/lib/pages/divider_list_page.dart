@@ -45,7 +45,7 @@ class DividerListExample extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        'Date: ${item.date.toIso8601String().split('T')[0]} | ID: ${item.id.length > 8 ? item.id.substring(0, 8) : item.id}',
+                        'Date: ${item.date?.toIso8601String().split('T')[0]} | ID: ${item.id.length > 8 ? item.id.substring(0, 8) : item.id}',
                         style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                       ),
                     ],

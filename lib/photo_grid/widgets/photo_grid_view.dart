@@ -9,18 +9,19 @@ import '../logic/photo_drag_region.dart';
 import '../logic/photo_selection_controller.dart';
 
 /// 构建网格照片项的函数：将数据模型转换为渲染所需的 Widget。
-typedef PhotoGridItemBuilder = Widget Function(
+typedef PhotoGridItemBuilder<T extends PhotoGridItem> = Widget Function(
   BuildContext context,
-  PhotoGridItem item,
+  T item,
   bool isSelected,
   bool selectionActive,
 );
-typedef PhotoGridHeaderBuilder = Widget Function(
+typedef PhotoGridHeaderBuilder<T extends PhotoGridItem> = Widget Function(
   BuildContext context,
   Bucket bucket,
   HeaderType header,
   double height,
   int assetOffset,
+  List<T> items,
 );
 typedef PhotoGridRowBuilder = Widget Function(
   BuildContext context,
@@ -42,12 +43,12 @@ typedef PhotoGridDividerBuilder = Widget Function(
 /// 内部集成 `CustomScrollView` 搭配 `SliverSegmentedList` 实现了照片按日期分组，
 /// 并且在滚动时可以通过 `PhotoGridScrubber` 提供悬浮的侧边日期滑块导航。
 /// 同时集成了 `PhotoDragRegion` 实现丝滑的跨屏幕拖拽选择体验。
-class PhotoGridView extends StatefulWidget {
+class PhotoGridView<T extends PhotoGridItem> extends StatefulWidget {
   /// 待渲染的所有时间轴元素集合。
-  final List<PhotoGridItem> items;
+  final List<T> items;
 
   /// 照片项构建器：业务层通过此函数定义照片（缩略图）的展示样式。
-  final PhotoGridItemBuilder itemBuilder;
+  final PhotoGridItemBuilder<T> itemBuilder;
 
   /// 每行展示的缩略图数量（默认 4）
   final int crossAxisCount;
@@ -78,22 +79,22 @@ class PhotoGridView extends StatefulWidget {
   final void Function(List<Segment> segments)? onSegmentsChanged;
 
   /// 自定义头部构建器。若不提供则使用内置默认样式。
-  final PhotoGridHeaderBuilder? headerBuilder;
+  final PhotoGridHeaderBuilder<T>? headerBuilder;
 
   /// 下拉刷新回调
   final Future<void> Function()? onRefresh;
 
   /// 项点击回调
-  final void Function(PhotoGridItem item)? onTap;
+  final void Function(T item)? onTap;
 
   /// 项双击回调
-  final void Function(PhotoGridItem item)? onDoubleTap;
+  final void Function(T item)? onDoubleTap;
 
   /// 项长按回调
-  final void Function(PhotoGridItem item)? onLongPress;
+  final void Function(T item)? onLongPress;
 
   /// 项辅助按钮点击（右键）回调，用于触发上下文菜单。
-  final void Function(PhotoGridItem item, Offset position)? onSecondaryTap;
+  final void Function(T item, Offset position)? onSecondaryTap;
 
   /// 额外的顶部 Sliver 列表，直接传入 CustomScrollView 以支持独立的吸顶/偏移逻辑。
   final List<Widget>? topSlivers;
@@ -147,7 +148,7 @@ class PhotoGridView extends StatefulWidget {
   /// 宫格模式：指定每行个数 [crossAxisCount] 和项宽高比 [childAspectRatio]。
   factory PhotoGridView.grid({
     Key? key,
-    required List<PhotoGridItem> items,
+    required List<T> items,
     required int crossAxisCount,
     double mainAxisSpacing = 4.0,
     double crossAxisSpacing = 4.0,
@@ -158,19 +159,19 @@ class PhotoGridView extends StatefulWidget {
     ScrollController? controller,
     void Function(List<Segment>)? onSegmentsChanged,
     Future<void> Function()? onRefresh,
-    void Function(PhotoGridItem)? onTap,
-    void Function(PhotoGridItem)? onDoubleTap,
-    void Function(PhotoGridItem)? onLongPress,
+    void Function(T)? onTap,
+    void Function(T)? onDoubleTap,
+    void Function(T)? onLongPress,
     List<Widget>? topSlivers,
     List<Widget>? endSlivers,
     void Function(Map<String, Rect>)? onLayoutInfoChanged,
-    PhotoGridHeaderBuilder? headerBuilder,
+    PhotoGridHeaderBuilder<T>? headerBuilder,
     double Function(HeaderType)? headerExtentCalculator,
     bool enableGrouping = true,
     bool disableInternalSelectionToggle = false,
     PhotoGridDividerBuilder? dividerBuilder,
-    required PhotoGridItemBuilder itemBuilder,
-  }) => PhotoGridView(
+    required PhotoGridItemBuilder<T> itemBuilder,
+  }) => PhotoGridView<T>(
     key: key,
     items: items,
     crossAxisCount: crossAxisCount,
@@ -200,7 +201,7 @@ class PhotoGridView extends StatefulWidget {
   /// 列表模式：强制一行一个，并指定固定的项高度 [itemHeight]。
   factory PhotoGridView.list({
     Key? key,
-    required List<PhotoGridItem> items,
+    required List<T> items,
     required double itemHeight,
     double mainAxisSpacing = 0.0,
     double crossAxisSpacing = 0.0,
@@ -209,19 +210,19 @@ class PhotoGridView extends StatefulWidget {
     ScrollController? controller,
     void Function(List<Segment>)? onSegmentsChanged,
     Future<void> Function()? onRefresh,
-    void Function(PhotoGridItem)? onTap,
-    void Function(PhotoGridItem)? onDoubleTap,
-    void Function(PhotoGridItem)? onLongPress,
+    void Function(T)? onTap,
+    void Function(T)? onDoubleTap,
+    void Function(T)? onLongPress,
     List<Widget>? topSlivers,
     List<Widget>? endSlivers,
     void Function(Map<String, Rect>)? onLayoutInfoChanged,
-    PhotoGridHeaderBuilder? headerBuilder,
+    PhotoGridHeaderBuilder<T>? headerBuilder,
     double Function(HeaderType)? headerExtentCalculator,
     bool enableGrouping = true,
     bool disableInternalSelectionToggle = false,
     PhotoGridDividerBuilder? dividerBuilder,
-    required PhotoGridItemBuilder itemBuilder,
-  }) => PhotoGridView(
+    required PhotoGridItemBuilder<T> itemBuilder,
+  }) => PhotoGridView<T>(
     key: key,
     items: items,
     crossAxisCount: 1,
@@ -249,10 +250,10 @@ class PhotoGridView extends StatefulWidget {
   );
 
   @override
-  State<PhotoGridView> createState() => _PhotoGridViewState();
+  State<PhotoGridView<T>> createState() => _PhotoGridViewState<T>();
 }
 
-class _PhotoGridViewState extends State<PhotoGridView> {
+class _PhotoGridViewState<T extends PhotoGridItem> extends State<PhotoGridView<T>> {
   ScrollController? _internalController;
   ScrollController get _scrollController => widget.controller ?? _internalController!;
 
@@ -284,7 +285,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
   }
 
   @override
-  void didUpdateWidget(PhotoGridView oldWidget) {
+  void didUpdateWidget(PhotoGridView<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       if (oldWidget.controller == null) {
@@ -314,7 +315,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     if (widget.items.isEmpty) return;
 
     if (!widget.enableGrouping) {
-      _buckets.add(TimeBucket(date: widget.items.first.date, assetCount: widget.items.length));
+      _buckets.add(TimeBucket(date: widget.items.first.date ?? DateTime.now(), assetCount: widget.items.length));
       return;
     }
 
@@ -322,7 +323,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     DateTime? currentDate;
 
     for (final item in widget.items) {
-      final date = item.date;
+      final date = item.date ?? DateTime.now();
       if (currentDate == null) {
         currentDate = date;
         count = 1;
@@ -363,7 +364,13 @@ class _PhotoGridViewState extends State<PhotoGridView> {
     int assetOffset,
   ) {
     if (widget.headerBuilder != null) {
-      return widget.headerBuilder!(context, bucket, type, height, assetOffset);
+      final startIndex = assetOffset;
+      final endIndex = min(
+        assetOffset + bucket.assetCount,
+        widget.items.length,
+      );
+      final groupItems = widget.items.sublist(startIndex, endIndex);
+      return widget.headerBuilder!(context, bucket, type, height, assetOffset, groupItems);
     }
 
     if (bucket is TimeBucket) {
@@ -466,7 +473,7 @@ class _PhotoGridViewState extends State<PhotoGridView> {
       return const SizedBox.shrink();
     }
 
-    return _AssetRow(
+    return _AssetRow<T>(
       items: widget.items.sublist(assetIndex, end),
       absoluteOffset: assetIndex,
       width: tileWidth,
@@ -655,8 +662,8 @@ class _PhotoGridViewState extends State<PhotoGridView> {
   }
 }
 
-class _AssetRow extends StatelessWidget {
-  final List<PhotoGridItem> items;
+class _AssetRow<T extends PhotoGridItem> extends StatelessWidget {
+  final List<T> items;
   final int absoluteOffset;
   final double width;
   final double height;
@@ -664,12 +671,12 @@ class _AssetRow extends StatelessWidget {
   final double crossAxisSpacing;
   final int crossAxisCount;
   final PhotoSelectionController? selectionController;
-  final void Function(PhotoGridItem)? onTap;
-  final void Function(PhotoGridItem)? onDoubleTap;
-  final void Function(PhotoGridItem)? onLongPress;
-  final void Function(PhotoGridItem item, Offset position)? onSecondaryTap;
+  final void Function(T)? onTap;
+  final void Function(T)? onDoubleTap;
+  final void Function(T)? onLongPress;
+  final void Function(T item, Offset position)? onSecondaryTap;
   final bool disableInternalSelectionToggle;
-  final PhotoGridItemBuilder itemBuilder;
+  final PhotoGridItemBuilder<T> itemBuilder;
   final PhotoGridDividerBuilder? dividerBuilder;
   final bool showDivider;
 
@@ -749,7 +756,7 @@ class _AssetRow extends StatelessWidget {
   /// 构建具体的单项内容
   Widget _buildItemContent(
     BuildContext context, 
-    PhotoGridItem item, 
+    T item, 
     int absoluteOffset,
     bool isSelected,
     bool selectionActive,

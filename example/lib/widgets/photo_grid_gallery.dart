@@ -4,8 +4,8 @@ import 'package:immich_file_list/photo_grid/photo_grid.dart';
 /// 这是一个业务层面的组合组件示例。
 /// 它将列表视图、滑动条 and 拖拽选择区域组合在一起，
 /// 实现了曾经 PhotoGridView 内部集成的所有功能，但现在是以组合的方式。
-class PhotoGridGallery extends StatefulWidget {
-  final List<PhotoGridItem> items;
+class PhotoGridGallery<T extends PhotoGridItem> extends StatefulWidget {
+  final List<T> items;
   final PhotoSelectionController? selectionController;
   final int crossAxisCount;
   final double mainAxisSpacing;
@@ -14,10 +14,10 @@ class PhotoGridGallery extends StatefulWidget {
   final double? mainAxisExtent;
   final GroupPhotoBy groupBy;
   final bool showScrubber;
-  final void Function(PhotoGridItem)? onTap;
-  final void Function(PhotoGridItem)? onDoubleTap;
-  final void Function(PhotoGridItem)? onLongPress;
-  final void Function(PhotoGridItem item, Offset position)? onSecondaryTap;
+  final void Function(T)? onTap;
+  final void Function(T)? onDoubleTap;
+  final void Function(T)? onLongPress;
+  final void Function(T item, Offset position)? onSecondaryTap;
   final List<Widget>? topSlivers;
   final List<Widget>? endSlivers;
   final ScrubberLabelBuilder? scrubberLabelBuilder;
@@ -41,8 +41,8 @@ class PhotoGridGallery extends StatefulWidget {
   final VoidCallback? onScrubberDragEnd;
   final bool showScrubberPrompt;
   final bool showScrubberRuler;
-  final PhotoGridItemBuilder itemBuilder;
-  final PhotoGridHeaderBuilder? headerBuilder;
+  final PhotoGridItemBuilder<T> itemBuilder;
+  final PhotoGridHeaderBuilder<T>? headerBuilder;
   final SelectionBoxPainterBuilder? selectionBoxPainterBuilder;
   final double Function(HeaderType)? headerExtentCalculator;
   final bool enableGrouping;
@@ -97,7 +97,7 @@ class PhotoGridGallery extends StatefulWidget {
   /// 宫格模式：指定每行个数 [crossAxisCount] 和项宽高比 [childAspectRatio]。
   factory PhotoGridGallery.grid({
     Key? key,
-    required List<PhotoGridItem> items,
+    required List<T> items,
     required int crossAxisCount,
     double mainAxisSpacing = 3.0,
     double crossAxisSpacing = 3.0,
@@ -106,14 +106,14 @@ class PhotoGridGallery extends StatefulWidget {
     GroupPhotoBy groupBy = GroupPhotoBy.month,
     bool showScrubber = true,
     PhotoSelectionController? selectionController,
-    void Function(PhotoGridItem)? onTap,
-    void Function(PhotoGridItem)? onDoubleTap,
-    void Function(PhotoGridItem)? onLongPress,
-    void Function(PhotoGridItem item, Offset position)? onSecondaryTap,
+    void Function(T)? onTap,
+    void Function(T)? onDoubleTap,
+    void Function(T)? onLongPress,
+    void Function(T item, Offset position)? onSecondaryTap,
     List<Widget>? topSlivers,
     List<Widget>? endSlivers,
-    required PhotoGridItemBuilder itemBuilder,
-    PhotoGridHeaderBuilder? headerBuilder,
+    required PhotoGridItemBuilder<T> itemBuilder,
+    PhotoGridHeaderBuilder<T>? headerBuilder,
     // Scrubber 配置
     ScrubberLabelBuilder? scrubberLabelBuilder,
     ScrubberThumbBuilder? scrubberThumbBuilder,
@@ -141,7 +141,7 @@ class PhotoGridGallery extends StatefulWidget {
     bool enableGrouping = true,
     PhotoGridDividerBuilder? dividerBuilder,
   }) {
-    return PhotoGridGallery(
+    return PhotoGridGallery<T>(
       key: key,
       items: items,
       crossAxisCount: crossAxisCount,
@@ -191,21 +191,21 @@ class PhotoGridGallery extends StatefulWidget {
   /// 列表模式：强制一行一个，并指定固定的项高度 [itemHeight]。
   factory PhotoGridGallery.list({
     Key? key,
-    required List<PhotoGridItem> items,
+    required List<T> items,
     required double itemHeight,
     double mainAxisSpacing = 0.0,
     double crossAxisSpacing = 0.0,
     GroupPhotoBy groupBy = GroupPhotoBy.month,
     bool showScrubber = true,
     PhotoSelectionController? selectionController,
-    void Function(PhotoGridItem)? onTap,
-    void Function(PhotoGridItem)? onDoubleTap,
-    void Function(PhotoGridItem)? onLongPress,
-    void Function(PhotoGridItem item, Offset position)? onSecondaryTap,
+    void Function(T)? onTap,
+    void Function(T)? onDoubleTap,
+    void Function(T)? onLongPress,
+    void Function(T item, Offset position)? onSecondaryTap,
     List<Widget>? topSlivers,
     List<Widget>? endSlivers,
-    required PhotoGridItemBuilder itemBuilder,
-    PhotoGridHeaderBuilder? headerBuilder,
+    required PhotoGridItemBuilder<T> itemBuilder,
+    PhotoGridHeaderBuilder<T>? headerBuilder,
     // Scrubber 配置
     ScrubberLabelBuilder? scrubberLabelBuilder,
     ScrubberThumbBuilder? scrubberThumbBuilder,
@@ -233,7 +233,7 @@ class PhotoGridGallery extends StatefulWidget {
     bool enableGrouping = true,
     PhotoGridDividerBuilder? dividerBuilder,
   }) {
-    return PhotoGridGallery(
+    return PhotoGridGallery<T>(
       key: key,
       items: items,
       crossAxisCount: 1,
@@ -281,10 +281,10 @@ class PhotoGridGallery extends StatefulWidget {
   }
 
   @override
-  State<PhotoGridGallery> createState() => _PhotoGridGalleryState();
+  State<PhotoGridGallery<T>> createState() => _PhotoGridGalleryState<T>();
 }
 
-class _PhotoGridGalleryState extends State<PhotoGridGallery> {
+class _PhotoGridGalleryState<T extends PhotoGridItem> extends State<PhotoGridGallery<T>> {
   final ScrollController _scrollController = ScrollController();
   List<Segment> _segments = [];
   Map<String, Rect> _itemLayoutMap = {};
@@ -363,7 +363,7 @@ class _PhotoGridGalleryState extends State<PhotoGridGallery> {
       builder: (context, constraints) {
         final height = constraints.maxHeight;
 
-        Widget grid = PhotoGridView(
+        Widget grid = PhotoGridView<T>(
           items: widget.items,
           crossAxisCount: widget.crossAxisCount,
           mainAxisSpacing: widget.mainAxisSpacing,
